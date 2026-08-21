@@ -1,8 +1,12 @@
 # Firebase kurulumu
 
-Telefon ve bilgisayarın aynı veriyi görmesi için. Bir kere yapılır, sonra
-her cihazda sadece son iki adım tekrarlanır. Ücretsiz plan (Spark) fazlasıyla
-yetiyor — iki kişilik bir kullanımda aylık kotanın yanına bile yaklaşmazsın.
+**Uygulama zaten kurulu bir Firebase projesiyle geliyor.** Ayar `js/firebase-config.js`
+dosyasında duruyor; uygulamayı açan cihaz kendiliğinden bağlanır, kimsenin bir şey
+yapıştırması gerekmez. Ayarlar → Bulut'tan bağlantıyı kesip yeniden kurabilirsin.
+
+Aşağıdakiler **kendi Firebase projeni kurmak** istersen geçerli — mesela bu projeyi
+başka birine devrederken ya da veriyi ayırmak istediğinde. Ücretsiz plan (Spark)
+fazlasıyla yetiyor.
 
 ## 1. Proje aç
 

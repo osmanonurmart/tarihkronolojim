@@ -269,7 +269,7 @@ K.cloud = (function () {
   /* ---- Bağlan / kes ---- */
   async function connect(nextCfg) {
     if (nextCfg) saveCfg(nextCfg);
-    if (!cfg) { setState('off'); return; }
+    if (!cfg || cfg.off) { setState('off'); return; }
 
     disconnect(true);
     setState('connecting');
@@ -305,7 +305,12 @@ K.cloud = (function () {
     unsubs = [];
     ready = false;
     pending = null;
-    if (!keepConfig) { saveCfg(null); backend = null; setState('off'); }
+    if (!keepConfig) {
+      // Gömülü ayar açılışta yeniden devreye girmesin diye tercih saklanır.
+      saveCfg({ off: true });
+      backend = null;
+      setState('off');
+    }
   }
 
   function onLocalChange(before, after) {
@@ -317,13 +322,29 @@ K.cloud = (function () {
     });
   }
 
+  /* Uygulamanın kendi ayarı gömülü geldiği için açılışta kendiliğinden
+     bağlanır. Kullanıcı bağlantıyı kestiyse o tercih saklanır ve bir daha
+     kendiliğinden bağlanmaz. */
   function boot() {
     loadCfg();
+    if (window.KRONOLOJIM_NO_CLOUD) { setState('off'); return; }   // testler için
+    if (cfg && cfg.off) { setState('off'); return; }
+    if (!cfg && K.firebaseConfig) {
+      cfg = { config: K.firebaseConfig, space: K.firebaseSpace || 'ev' };
+    }
     if (cfg) connect();
   }
 
+  function hasBuiltIn() { return !!K.firebaseConfig; }
+
+  /* Kesilmiş bağlantıyı gömülü ayarla yeniden kurar. */
+  function reconnect() {
+    saveCfg(null);
+    boot();
+  }
+
   return {
-    boot, connect, disconnect, onLocalChange,
+    boot, connect, disconnect, reconnect, hasBuiltIn, onLocalChange,
     status: () => state,
     error: () => lastError,
     config: () => cfg,

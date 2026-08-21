@@ -131,6 +131,7 @@ K.panels = (function () {
   /* ---- Bulut ---- */
   const CLOUD_LABEL = {
     off: 'Kapalı — veriler yalnızca bu cihazda',
+    first: 'İlk eşitleme yapılıyor…',
     connecting: 'Bağlanılıyor…',
     online: 'Bağlı — değişiklikler anında eşitleniyor',
     offline: 'Çevrimdışı — bağlantı gelince eşitlenecek',
@@ -141,45 +142,39 @@ K.panels = (function () {
     const st = K.cloud.status();
     const cfg = K.cloud.config();
     const err = K.cloud.error();
+    const off = !cfg || cfg.off;
 
-    let body;
-    if (cfg) {
-      body =
+    if (off) {
+      return '<div class="field"><label>Bulut</label>' +
         '<div class="pick-row" style="gap:.5rem">' +
-          '<span class="cloud-dot ' + st + '"></span>' +
-          '<span style="flex:1">' + esc(CLOUD_LABEL[st] || st) + '</span>' +
+          '<span class="cloud-dot off"></span>' +
+          '<span style="flex:1">Kapalı — veriler yalnızca bu cihazda</span>' +
         '</div>' +
-        '<div class="hint" style="margin:.4rem 0">Proje: <b>' + esc(cfg.config.projectId) + '</b> · Ev kodu: <b>' + esc(cfg.space) + '</b></div>' +
-        (err ? '<div class="hint" style="color:var(--bad)">' + esc(err) + '</div>' : '') +
-        '<div class="row" style="margin-top:.5rem">' +
-          '<button class="btn" id="c-retry" type="button">Yeniden bağlan</button>' +
-          '<button class="btn danger" id="c-off" type="button">Bağlantıyı kes</button>' +
-        '</div>';
-    } else {
-      body =
-        '<div class="hint" style="margin-bottom:.5rem">Telefon ve bilgisayarın aynı veriyi görmesi için Firebase ayarını yapıştır. Adımlar: <b>docs/firebase.md</b></div>' +
-        '<textarea id="c-cfg" placeholder="const firebaseConfig = { apiKey: ... };" style="min-height:5.5rem;font-family:ui-monospace,monospace;font-size:.78rem"></textarea>' +
-        '<input type="text" id="c-space" value="ev" placeholder="Ev kodu" style="margin-top:.4rem">' +
-        '<div class="hint">Ev kodu, aynı veriyi paylaşan cihazların ortak adı. İkinizde de aynı olmalı.</div>' +
-        '<button class="btn primary" id="c-on" type="button" style="margin-top:.5rem">Bağlan</button>';
+        (K.cloud.hasBuiltIn()
+          ? '<button class="btn primary" id="c-on" type="button" style="margin-top:.5rem">Yeniden bağlan</button>'
+          : '<div class="hint" style="margin-top:.5rem">Bu sürümde gömülü bir Firebase ayarı yok.</div>') +
+      '</div>';
     }
 
-    return '<div class="field"><label>Bulut</label>' + body + '</div>';
+    return '<div class="field"><label>Bulut</label>' +
+      '<div class="pick-row" style="gap:.5rem">' +
+        '<span class="cloud-dot ' + st + '"></span>' +
+        '<span style="flex:1">' + esc(CLOUD_LABEL[st] || st) + '</span>' +
+      '</div>' +
+      '<div class="hint" style="margin:.4rem 0">Proje: <b>' + esc(cfg.config.projectId) + '</b> · Ev kodu: <b>' + esc(cfg.space) + '</b></div>' +
+      (err ? '<div class="hint" style="color:var(--bad)">' + esc(err) + '</div>' : '') +
+      '<div class="row" style="margin-top:.5rem">' +
+        '<button class="btn" id="c-retry" type="button">Yeniden dene</button>' +
+        '<button class="btn danger" id="c-off" type="button">Bağlantıyı kes</button>' +
+      '</div>' +
+    '</div>';
   }
 
   function bindCloud(root) {
     const on = root.querySelector('#c-on');
     if (on) on.addEventListener('click', () => {
-      let parsed;
-      try {
-        parsed = K.cloud.parseConfig(root.querySelector('#c-cfg').value);
-      } catch (e) {
-        K.util.toast('Ayar okunamadı: ' + e.message);
-        return;
-      }
-      const space = (root.querySelector('#c-space').value || 'ev').trim();
       K.sheet.close();
-      K.cloud.connect({ config: parsed, space: space });
+      K.cloud.reconnect();
       K.util.toast('Bağlanılıyor…');
     });
 
@@ -188,7 +183,7 @@ K.panels = (function () {
 
     const off = root.querySelector('#c-off');
     if (off) off.addEventListener('click', () => {
-      if (!K.util.confirmAsk('Bulut bağlantısı kesilsin mi? Veriler bu cihazda kalır.')) return;
+      if (!K.util.confirmAsk('Bulut bağlantısı kesilsin mi? Veriler bu cihazda kalır, bu cihaz artık eşitlenmez.')) return;
       K.cloud.disconnect();
       K.sheet.close();
       K.util.toast('Bağlantı kesildi');

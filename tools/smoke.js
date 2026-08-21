@@ -9,6 +9,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   page.on('pageerror', e => errs.push('SAYFA HATASI: ' + e.message));
   page.on('console', m => { if (m.type() === 'error' && !/ERR_CONNECTION|fonts\.googleapis/.test(m.text())) errs.push('KONSOL: ' + m.text()); });
 
+  await page.addInitScript(() => { window.KRONOLOJIM_NO_CLOUD = true; });
   await page.goto('http://localhost:8899/', { waitUntil: 'networkidle' });
 
   console.log('\n[1] Karşılama');

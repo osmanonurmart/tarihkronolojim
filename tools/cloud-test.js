@@ -36,7 +36,29 @@ window.FAKE = {
   const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   page.on('pageerror', e => errs.push('SAYFA HATASI: ' + e.message));
+  await page.goto('http://localhost:8899/', { waitUntil: 'domcontentloaded' });
+
+  console.log('\n[0] Gömülü ayarla kendiliğinden bağlanma');
+  const builtIn = await page.evaluate(() => ({
+    has: K.cloud.hasBuiltIn(),
+    project: K.cloud.config() && K.cloud.config().config && K.cloud.config().config.projectId,
+    space: K.cloud.config() && K.cloud.config().space
+  }));
+  ok(builtIn.has === true, 'uygulamada gömülü Firebase ayarı var');
+  ok(builtIn.project === 'tarihkronolojim-a8405', 'açılışta gömülü ayar devreye girdi (' + builtIn.project + ')');
+  ok(builtIn.space === 'ev', 'ev kodu gömülü geliyor');
+  await page.click('button:has-text("Onur")');
+  await page.click('[data-act="settings"]');
+  await page.waitForSelector('.sheet');
+  ok((await page.locator('#c-cfg').count()) === 0, 'ayar yapıştırma kutusu artık yok');
+  ok((await page.locator('#c-off').count()) === 1, 'bağlantıyı kesme düğmesi duruyor');
+  await page.keyboard.press('Escape');
+
+  // Kalan sınamalar ağa çıkmasın diye kendiliğinden bağlanmayı kapatıyoruz.
+  await page.addInitScript(() => { window.KRONOLOJIM_NO_CLOUD = true; });
   await page.goto('http://localhost:8899/', { waitUntil: 'networkidle' });
+  await page.evaluate(() => localStorage.clear());
+  await page.reload({ waitUntil: 'networkidle' });
 
   console.log('\n[1] Saf işlevler');
   const pure = await page.evaluate(() => {

@@ -33,8 +33,9 @@ gibi açılır ve internetsiz çalışır.
   zayıf olanlar önde.
 - **Kör mod** — tarihleri gizler, dokununca tek tek açılır.
 - **Yedek** — dosya olarak indir/geri yükle, ya da okunabilir metni kopyala.
-- **Bulut** — Firebase ile telefon ve bilgisayar eşitlenir. Yalnızca değişen
-  kayıtlar yollanır, çevrimdışıyken uygulama aynen çalışır. Kurulum:
+- **Bulut** — Firebase ile telefon ve bilgisayar eşitlenir; ayar gömülü geldiği
+  için uygulamayı açan cihaz kendiliğinden bağlanır. Yalnızca değişen kayıtlar
+  yollanır, çevrimdışıyken uygulama aynen çalışır. Kendi projeni kurmak için:
   [`docs/firebase.md`](docs/firebase.md).
 
 ## Sırada ne var
@@ -59,6 +60,7 @@ css/app.css         tüm görsel dil, karanlık ve açık tema
 js/util.js          küçük yardımcılar
 js/model.js         olay modeli, tarih biçimleri, ağaç kurma
 js/store.js         durum, kayıt, geri alma
+js/firebase-config.js  gömülü Firebase ayarı
 js/cloud.js         Firebase senkronu
 js/srs.js           beş basamaklı tekrar sistemi ve soru üretimi
 js/views/           ekranlar

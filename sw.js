@@ -1,7 +1,7 @@
-const CACHE = 'kronolojim-v2';
+const CACHE = 'kronolojim-v3';
 const ASSETS = [
   './', './index.html', './css/app.css', './icon.svg', './manifest.webmanifest',
-  './js/util.js', './js/model.js', './js/store.js', './js/cloud.js', './js/srs.js', './js/app.js',
+  './js/util.js', './js/model.js', './js/store.js', './js/firebase-config.js', './js/cloud.js', './js/srs.js', './js/app.js',
   './js/views/timeline.js', './js/views/editor.js', './js/views/study.js', './js/views/panels.js'
 ];
 
