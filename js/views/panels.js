@@ -96,12 +96,15 @@ K.panels = (function () {
         '</label>' +
       '</div>' +
 
+      cloudSection() +
+
       '<div class="field">' +
         '<label>Tehlikeli</label>' +
         '<button class="btn danger" id="s-reset" type="button">Her şeyi sil</button>' +
       '</div>',
 
       function (root) {
+        bindCloud(root);
         root.querySelector('#s-theme').addEventListener('click', (e) => {
           const b = e.target.closest('[data-theme]');
           if (!b) return;
@@ -120,6 +123,94 @@ K.panels = (function () {
           localStorage.removeItem('kronolojim.v1');
           location.reload();
         });
+      }
+    );
+  }
+
+
+  /* ---- Bulut ---- */
+  const CLOUD_LABEL = {
+    off: 'Kapalı — veriler yalnızca bu cihazda',
+    connecting: 'Bağlanılıyor…',
+    online: 'Bağlı — değişiklikler anında eşitleniyor',
+    offline: 'Çevrimdışı — bağlantı gelince eşitlenecek',
+    error: 'Bağlanamadı'
+  };
+
+  function cloudSection() {
+    const st = K.cloud.status();
+    const cfg = K.cloud.config();
+    const err = K.cloud.error();
+
+    let body;
+    if (cfg) {
+      body =
+        '<div class="pick-row" style="gap:.5rem">' +
+          '<span class="cloud-dot ' + st + '"></span>' +
+          '<span style="flex:1">' + esc(CLOUD_LABEL[st] || st) + '</span>' +
+        '</div>' +
+        '<div class="hint" style="margin:.4rem 0">Proje: <b>' + esc(cfg.config.projectId) + '</b> · Ev kodu: <b>' + esc(cfg.space) + '</b></div>' +
+        (err ? '<div class="hint" style="color:var(--bad)">' + esc(err) + '</div>' : '') +
+        '<div class="row" style="margin-top:.5rem">' +
+          '<button class="btn" id="c-retry" type="button">Yeniden bağlan</button>' +
+          '<button class="btn danger" id="c-off" type="button">Bağlantıyı kes</button>' +
+        '</div>';
+    } else {
+      body =
+        '<div class="hint" style="margin-bottom:.5rem">Telefon ve bilgisayarın aynı veriyi görmesi için Firebase ayarını yapıştır. Adımlar: <b>docs/firebase.md</b></div>' +
+        '<textarea id="c-cfg" placeholder="const firebaseConfig = { apiKey: ... };" style="min-height:5.5rem;font-family:ui-monospace,monospace;font-size:.78rem"></textarea>' +
+        '<input type="text" id="c-space" value="ev" placeholder="Ev kodu" style="margin-top:.4rem">' +
+        '<div class="hint">Ev kodu, aynı veriyi paylaşan cihazların ortak adı. İkinizde de aynı olmalı.</div>' +
+        '<button class="btn primary" id="c-on" type="button" style="margin-top:.5rem">Bağlan</button>';
+    }
+
+    return '<div class="field"><label>Bulut</label>' + body + '</div>';
+  }
+
+  function bindCloud(root) {
+    const on = root.querySelector('#c-on');
+    if (on) on.addEventListener('click', () => {
+      let parsed;
+      try {
+        parsed = K.cloud.parseConfig(root.querySelector('#c-cfg').value);
+      } catch (e) {
+        K.util.toast('Ayar okunamadı: ' + e.message);
+        return;
+      }
+      const space = (root.querySelector('#c-space').value || 'ev').trim();
+      K.sheet.close();
+      K.cloud.connect({ config: parsed, space: space });
+      K.util.toast('Bağlanılıyor…');
+    });
+
+    const retry = root.querySelector('#c-retry');
+    if (retry) retry.addEventListener('click', () => { K.sheet.close(); K.cloud.connect(); });
+
+    const off = root.querySelector('#c-off');
+    if (off) off.addEventListener('click', () => {
+      if (!K.util.confirmAsk('Bulut bağlantısı kesilsin mi? Veriler bu cihazda kalır.')) return;
+      K.cloud.disconnect();
+      K.sheet.close();
+      K.util.toast('Bağlantı kesildi');
+    });
+  }
+
+  /* Hem bulutta hem bu cihazda veri varsa hangisinin kalacağını sorar. */
+  function cloudMerge(choose) {
+    const db = K.store.get();
+    K.sheet.open(
+      '<h2>İki tarafta da veri var</h2>' +
+      '<p class="hint" style="margin-bottom:.9rem">Bulutta zaten kayıtlı olaylar var, bu cihazda da ' +
+        db.events.length + ' olay duruyor. Hangisi kalsın? Seçilmeyen taraf silinir.</p>' +
+      '<div class="pick">' +
+        '<button class="pick-row" id="m-cloud"><span class="avatar">☁</span>' +
+          '<span>Buluttakiler kalsın</span></button>' +
+        '<button class="pick-row" id="m-local"><span class="avatar">▣</span>' +
+          '<span>Bu cihazdakiler kalsın</span></button>' +
+      '</div>',
+      function (root) {
+        root.querySelector('#m-cloud').addEventListener('click', () => { K.sheet.close(); choose('cloud'); });
+        root.querySelector('#m-local').addEventListener('click', () => { K.sheet.close(); choose('local'); });
       }
     );
   }
@@ -257,5 +348,5 @@ K.panels = (function () {
     K.util.toast('Örnekler eklendi', 'Geri al', () => K.store.undo());
   }
 
-  return { welcome, profiles, lists, settings, samples, outline };
+  return { welcome, profiles, lists, settings, samples, outline, cloudMerge };
 })();

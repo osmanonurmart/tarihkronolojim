@@ -5,7 +5,7 @@ const root = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 
 const scripts = [
-  'js/util.js', 'js/model.js', 'js/store.js', 'js/srs.js',
+  'js/util.js', 'js/model.js', 'js/store.js', 'js/cloud.js', 'js/srs.js',
   'js/views/timeline.js', 'js/views/editor.js', 'js/views/study.js',
   'js/views/panels.js', 'js/app.js'
 ];

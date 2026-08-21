@@ -168,6 +168,7 @@ K.app = (function () {
 
   function boot() {
     K.store.init();
+    K.cloud.boot();
     applyTheme();
     K.store.subscribe(render);
     document.addEventListener('click', onClick);

@@ -52,16 +52,28 @@ K.store = (function () {
   function get() { return db; }
   function subscribe(fn) { subs.push(fn); }
 
-  /* İçerik değişikliği: geri alma yığınına yazılır. */
-  function mutate(fn) {
-    undoStack.push(JSON.stringify(db));
-    if (undoStack.length > UNDO_MAX) undoStack.shift();
+  /* Her değişiklik buradan geçer: kaydet, haber ver, buluta yolla.
+     Geri alma yığını yalnızca içerik değişikliklerinde büyür. */
+  function commit(fn, undoable) {
+    const before = JSON.stringify(db);
+    if (undoable) {
+      undoStack.push(before);
+      if (undoStack.length > UNDO_MAX) undoStack.shift();
+    }
     fn(db);
     save(); emit();
+    if (K.cloud) K.cloud.onLocalChange(JSON.parse(before), db);
   }
 
+  /* İçerik değişikliği: geri alınabilir. */
+  function mutate(fn) { commit(fn, true); }
+
   /* Görünüm ve ilerleme değişiklikleri geri almayı kirletmesin. */
-  function quiet(fn) { fn(db); save(); emit(); }
+  function quiet(fn) { commit(fn, false); }
+
+  /* Buluttan gelen değişiklik: yerel kaydı tazeler, geri alma yığınına
+     dokunmaz ve buluta geri yollanmaz (K.cloud kendi bayrağını tutar). */
+  function applyRemote(fn) { fn(db); save(); emit(); }
 
   function canUndo() { return undoStack.length > 0; }
 
@@ -76,14 +88,14 @@ K.store = (function () {
   }
 
   function replaceAll(next) {
-    undoStack.push(JSON.stringify(db));
-    const ui = db.ui;
-    db = next;
-    db.ui = Object.assign(seed().ui, ui, {
-      listId: (next.lists && next.lists[0]) ? next.lists[0].id : null,
-      profileId: null
-    });
-    save(); emit();
+    commit(() => {
+      const ui = db.ui;
+      db = next;
+      db.ui = Object.assign(seed().ui, ui, {
+        listId: (next.lists && next.lists[0]) ? next.lists[0].id : null,
+        profileId: null
+      });
+    }, true);
   }
 
   function reset() { mutate(() => { db = seed(); }); }
@@ -93,7 +105,7 @@ K.store = (function () {
   const list = () => db.lists.find((l) => l.id === db.ui.listId) || null;
 
   return {
-    init, get, subscribe, mutate, quiet, undo, canUndo, replaceAll, reset,
+    init, get, subscribe, mutate, quiet, applyRemote, undo, canUndo, replaceAll, reset,
     profile, list, seed
   };
 })();

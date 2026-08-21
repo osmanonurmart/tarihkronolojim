@@ -199,7 +199,9 @@ K.timeline = (function () {
         '<button class="iconbtn" data-act="undo" ' + (K.store.canUndo() ? '' : 'disabled') + ' aria-label="Geri al" title="Geri al">↺</button>' +
         '<button class="iconbtn ' + (db.ui.blind ? 'on' : '') + '" data-act="blind" aria-label="Kör mod" title="Kör mod">' + (db.ui.blind ? '◌' : '◉') + '</button>' +
         '<button class="iconbtn ' + (db.ui.editing ? 'on' : '') + '" data-act="edit" aria-label="Düzenle" title="Düzenle">✎</button>' +
-        '<button class="iconbtn" data-act="settings" aria-label="Ayarlar" title="Ayarlar">⋯</button>' +
+        '<button class="iconbtn" data-act="settings" aria-label="Ayarlar" title="Ayarlar">⋯' +
+          (K.cloud.status() === 'off' ? '' : '<span class="cloud-dot ' + K.cloud.status() + '"></span>') +
+        '</button>' +
       '</div>' +
       dueBar(db) +
       (has

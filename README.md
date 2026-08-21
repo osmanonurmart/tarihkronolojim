@@ -33,15 +33,19 @@ gibi açılır ve internetsiz çalışır.
   zayıf olanlar önde.
 - **Kör mod** — tarihleri gizler, dokununca tek tek açılır.
 - **Yedek** — dosya olarak indir/geri yükle, ya da okunabilir metni kopyala.
+- **Bulut** — Firebase ile telefon ve bilgisayar eşitlenir. Yalnızca değişen
+  kayıtlar yollanır, çevrimdışıyken uygulama aynen çalışır. Kurulum:
+  [`docs/firebase.md`](docs/firebase.md).
 
 ## Sırada ne var
 
-Firebase senkronu, sıraya dizme oyunu, hazır tarih paketleri, arama ve filtre.
+Sıraya dizme oyunu, hazır tarih paketleri, arama ve filtre.
 
 ## Geliştirme
 
 ```
 npm test           # tarayıcıda uçtan uca duman testi (Playwright)
+npm run test:cloud # bulut senkronu, sahte bir Firestore ile
 npm run bundle     # dist/index.html — tek dosyalık sürüm
 ```
 
@@ -55,9 +59,11 @@ css/app.css         tüm görsel dil, karanlık ve açık tema
 js/util.js          küçük yardımcılar
 js/model.js         olay modeli, tarih biçimleri, ağaç kurma
 js/store.js         durum, kayıt, geri alma
+js/cloud.js         Firebase senkronu
 js/srs.js           beş basamaklı tekrar sistemi ve soru üretimi
 js/views/           ekranlar
 js/app.js           yönlendirme ve eylemler
 tools/              sunucu, test, paketleyici
 docs/plan.html      tasarım planı
+docs/firebase.md    bulut kurulumu
 ```

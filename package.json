@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node tools/serve.js . 8899",
     "test": "node tools/smoke.js .",
+    "test:cloud": "node tools/cloud-test.js",
     "bundle": "node tools/bundle.js"
   },
   "devDependencies": {
