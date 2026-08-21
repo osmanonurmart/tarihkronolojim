@@ -1,0 +1,718 @@
+<title>Kronolojim Planı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* ---- Tokens: dark is the default, light is the swap ---- */
+  :root {
+    --bg:        #101219;
+    --surface:   #171A23;
+    --surface-2: #1E222D;
+    --line:      #2A2F3D;
+    --line-soft: #21252F;
+    --text:      #E8EAF0;
+    --dim:       #9BA2B4;
+    --faint:     #6C7488;
+    --accent:    #3DD37E;
+    --accent-bg: #14301F;
+
+    --lv1: #5A6275;
+    --lv2: #C9A94E;
+    --lv3: #A8BC55;
+    --lv4: #6FCB7E;
+    --lv5: #3DD37E;
+
+    --shadow: 0 1px 0 rgba(255,255,255,.03), 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg:        #F3F4F8;
+      --surface:   #FFFFFF;
+      --surface-2: #EAECF2;
+      --line:      #D9DCE5;
+      --line-soft: #E6E8EF;
+      --text:      #171A23;
+      --dim:       #565C6B;
+      --faint:     #838A9B;
+      --accent:    #12854A;
+      --accent-bg: #E2F3E8;
+      --lv1: #A5ABBA;
+      --lv2: #A98A16;
+      --lv3: #77922B;
+      --lv4: #2F9C57;
+      --lv5: #12854A;
+      --shadow: 0 1px 2px rgba(23,26,35,.06), 0 8px 24px rgba(23,26,35,.07);
+    }
+  }
+
+  :root[data-theme="light"] {
+    --bg:        #F3F4F8;
+    --surface:   #FFFFFF;
+    --surface-2: #EAECF2;
+    --line:      #D9DCE5;
+    --line-soft: #E6E8EF;
+    --text:      #171A23;
+    --dim:       #565C6B;
+    --faint:     #838A9B;
+    --accent:    #12854A;
+    --accent-bg: #E2F3E8;
+    --lv1: #A5ABBA;
+    --lv2: #A98A16;
+    --lv3: #77922B;
+    --lv4: #2F9C57;
+    --lv5: #12854A;
+    --shadow: 0 1px 2px rgba(23,26,35,.06), 0 8px 24px rgba(23,26,35,.07);
+  }
+
+  /* ---- Base ---- */
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 43rem;
+    margin: 0 auto;
+    padding: 4rem 1.25rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  /* ---- Masthead ---- */
+  .masthead { display: flex; flex-direction: column; gap: .9rem; }
+  .kicker {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .7rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  h1 {
+    font-family: "Newsreader", Georgia, serif;
+    font-weight: 500;
+    font-size: clamp(2.3rem, 7vw, 3.4rem);
+    line-height: 1.05;
+    letter-spacing: -.015em;
+    text-wrap: balance;
+    margin: 0;
+  }
+  .standfirst {
+    font-family: "Newsreader", Georgia, serif;
+    font-size: 1.2rem;
+    line-height: 1.55;
+    color: var(--dim);
+    max-width: 34rem;
+    margin: 0;
+  }
+  .masthead-rule {
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent), var(--line) 45%, transparent);
+    margin-top: .5rem;
+  }
+
+  /* ---- Sections ---- */
+  section { display: flex; flex-direction: column; gap: 1rem; }
+  h2 {
+    font-family: "Newsreader", Georgia, serif;
+    font-weight: 600;
+    font-size: 1.7rem;
+    line-height: 1.2;
+    letter-spacing: -.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h3 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-weight: 600;
+    font-size: .95rem;
+    margin: 0;
+    letter-spacing: .005em;
+  }
+  p { margin: 0; max-width: 36rem; }
+  .lede { color: var(--dim); }
+  strong { font-weight: 600; }
+  em { font-style: italic; color: var(--dim); }
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .86em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 4px;
+    padding: .08em .35em;
+  }
+
+  ul { margin: 0; padding-left: 1.15rem; display: flex; flex-direction: column; gap: .45rem; }
+  li { max-width: 35rem; }
+  li::marker { color: var(--faint); }
+
+  /* ---- Card / panel ---- */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.15rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: .75rem;
+  }
+
+  /* ---- Table ---- */
+  .table-scroll { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 26rem;
+    font-size: .92rem;
+  }
+  th {
+    text-align: left;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+    font-size: .68rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0 .9rem .55rem 0;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td {
+    padding: .6rem .9rem .6rem 0;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  td:last-child, th:last-child { padding-right: 0; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---- Level ring ---- */
+  .ring { display: inline-flex; gap: 3px; align-items: center; vertical-align: middle; }
+  .ring i {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; opacity: .22;
+  }
+  .ring i.on { opacity: 1; }
+  .lv1 { color: var(--lv1); }
+  .lv2 { color: var(--lv2); }
+  .lv3 { color: var(--lv3); }
+  .lv4 { color: var(--lv4); }
+  .lv5 { color: var(--lv5); }
+
+  /* ---- Phone mockup ---- */
+  .mock-figure { display: flex; flex-direction: column; gap: .75rem; align-items: center; }
+  .phone {
+    width: 100%;
+    max-width: 22rem;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    padding: .55rem;
+    box-shadow: var(--shadow);
+  }
+  .phone-inner {
+    background: var(--surface);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .app-bar {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .7rem .8rem;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: .8rem;
+  }
+  .avatar {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent-bg);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    display: grid; place-items: center;
+    font-size: .6rem; font-weight: 600;
+    flex: none;
+  }
+  .app-bar .who { font-weight: 600; }
+  .app-bar .list-name { color: var(--faint); margin-left: auto; font-size: .72rem; }
+
+  .due {
+    margin: .7rem .8rem 0;
+    background: var(--accent-bg);
+    border: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
+    border-radius: 8px;
+    padding: .5rem .7rem;
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .78rem;
+  }
+  .due .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex: none; }
+  .due .go { margin-left: auto; color: var(--accent); font-size: .7rem; font-weight: 600; }
+
+  .stream { padding: .7rem .8rem .9rem; display: flex; gap: .5rem; }
+
+  /* left gutter: the span bracket */
+  .gutter { width: 26px; flex: none; display: flex; }
+  .bracket {
+    flex: 1;
+    border: 1px solid var(--accent);
+    border-right: none;
+    border-radius: 9px 0 0 9px;
+    display: flex; align-items: center; justify-content: center;
+    padding: .2rem 0;
+  }
+  .bracket span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .6rem;
+    letter-spacing: .08em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .cards { flex: 1; display: flex; flex-direction: column; gap: .4rem; min-width: 0; }
+
+  .ev {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: .45rem .6rem;
+    display: flex; flex-direction: column; gap: .12rem;
+  }
+  .ev-top {
+    display: flex; align-items: center; gap: .5rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .65rem;
+    color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .ev-top .ring { margin-left: auto; }
+  .ev-title { font-size: .8rem; font-weight: 500; line-height: 1.3; }
+  .ev-note { font-size: .65rem; color: var(--faint); }
+
+  /* consequence link */
+  .link-row { display: flex; gap: .4rem; padding-left: .9rem; }
+  .link-elbow {
+    width: 12px; flex: none;
+    border-left: 1px dashed var(--faint);
+    border-bottom: 1px dashed var(--faint);
+    border-radius: 0 0 0 6px;
+    margin-bottom: 1.1rem;
+  }
+  .ev.consequence { border-style: dashed; flex: 1; }
+  .ev.consequence .tag {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .55rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  /* group box */
+  .group {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: .4rem .5rem .5rem;
+    display: flex; flex-direction: column; gap: .3rem;
+    background: color-mix(in oklab, var(--surface-2) 55%, transparent);
+  }
+  .group-name {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .58rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .group-row {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .75rem;
+  }
+  .group-row .idx {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .62rem;
+    color: var(--faint);
+    width: .9rem; flex: none;
+  }
+  .group-row .ring { margin-left: auto; }
+
+  .caption {
+    font-size: .78rem;
+    color: var(--faint);
+    text-align: center;
+    max-width: 24rem;
+  }
+
+  /* ---- Phase rail (a real sequence, so it's numbered) ---- */
+  .phases { display: flex; flex-direction: column; gap: 0; }
+  .phase {
+    display: flex; gap: 1rem;
+    padding-bottom: 1.1rem;
+    position: relative;
+  }
+  .phase:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: 13px; top: 30px; bottom: 0;
+    width: 1px;
+    background: var(--line);
+  }
+  .phase-num {
+    width: 27px; height: 27px; flex: none;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    display: grid; place-items: center;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .72rem;
+    color: var(--dim);
+    position: relative; z-index: 1;
+  }
+  .phase:first-child .phase-num {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-bg);
+  }
+  .phase-body { display: flex; flex-direction: column; gap: .15rem; padding-top: .1rem; }
+  .phase-body p { font-size: .9rem; color: var(--dim); }
+
+  /* ---- Level scale strip ---- */
+  .scale { display: flex; flex-direction: column; gap: .55rem; }
+  .scale-row {
+    display: flex; align-items: baseline; gap: .75rem;
+    font-size: .9rem;
+  }
+  .scale-row .ring { flex: none; align-self: center; }
+  .scale-row .name { font-weight: 500; min-width: 8.5rem; }
+  .scale-row .when { color: var(--faint); font-size: .82rem; margin-left: auto; white-space: nowrap; }
+
+  /* ---- Open items ---- */
+  .open { border-left: 2px solid var(--lv2); padding-left: 1rem; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.25rem;
+    font-size: .82rem;
+    color: var(--faint);
+  }
+
+  @media (max-width: 30rem) {
+    .wrap { padding-top: 2.5rem; gap: 2.5rem; }
+    .scale-row { flex-wrap: wrap; }
+    .scale-row .when { margin-left: 0; width: 100%; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="kicker">Uygulama planı · 21 Ağustos 2026</div>
+    <h1>Kronolojim</h1>
+    <p class="standfirst">Tarih olaylarını kendi girdiğin bir zaman çizelgesine dizen, sonra onları unutmadan önce sana geri soran çalışma uygulaması.</p>
+    <div class="masthead-rule"></div>
+  </header>
+
+  <section>
+    <h2>Ne yapıyor</h2>
+    <p class="lede">Uygulama içerik üretmiyor — olayları sen giriyorsun. Onun işi üç şey: <strong>doğru sıraya dizmek</strong>, <strong>net göstermek</strong> ve <strong>ne kadar bildiğini takip edip zayıf olduğun yerleri her gün önüne getirmek</strong>.</p>
+    <p class="lede">Telefon için tasarlanıyor, bilgisayarda da aynı görünüyor. Karanlık tema varsayılan.</p>
+  </section>
+
+  <section>
+    <h2>Ana ekran</h2>
+    <div class="mock-figure">
+      <div class="phone">
+        <div class="phone-inner">
+
+          <div class="app-bar">
+            <span class="avatar">O</span>
+            <span class="who">Onur</span>
+            <span style="color:var(--faint)">▾</span>
+            <span class="list-name">İnkılap Tarihi</span>
+          </div>
+
+          <div class="due">
+            <span class="dot"></span>
+            <span>Bugün 14 tekrar var</span>
+            <span class="go">BAŞLA ▸</span>
+          </div>
+
+          <div class="stream">
+            <div class="gutter">
+              <div class="bracket"><span>Kurtuluş Savaşı 1919–1922</span></div>
+            </div>
+
+            <div class="cards">
+
+              <div class="ev">
+                <div class="ev-top">
+                  <span>19 May 1919</span>
+                  <span class="ring lv3"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+                </div>
+                <div class="ev-title">Samsun'a Çıkış</div>
+              </div>
+
+              <div class="ev">
+                <div class="ev-top">
+                  <span>23 Tem 1919</span>
+                  <span class="ring lv5"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+                </div>
+                <div class="ev-title">Erzurum Kongresi</div>
+                <div class="ev-note">Bölgesel değil, ulusal karar alındı</div>
+              </div>
+
+              <div class="ev">
+                <div class="ev-top">
+                  <span>23–31 Mar 1921</span>
+                  <span class="ring lv2"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span>
+                </div>
+                <div class="ev-title">II. İnönü Savaşı</div>
+              </div>
+
+              <div class="link-row">
+                <div class="link-elbow"></div>
+                <div class="ev consequence">
+                  <div class="tag">ardından</div>
+                  <div class="ev-title">İsmet Bey Dışişleri'ne geçti</div>
+                </div>
+              </div>
+
+              <div class="group">
+                <div class="group-name">Cepheler</div>
+                <div class="group-row">
+                  <span class="idx">1</span>
+                  <span>Doğu Cephesi</span>
+                  <span class="ring lv4"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>
+                </div>
+                <div class="group-row">
+                  <span class="idx">2</span>
+                  <span>Güney Cephesi</span>
+                  <span class="ring lv1"><i class="on"></i><i></i><i></i><i></i><i></i></span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <p class="caption">Tek sütun, dikey akış. Sol taraftaki parantez kapsamı gösterir ve yazısı kaydırırken ekranda kalır.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Olay</h2>
+    <p class="lede">Her şeyin temeli tek bir kavram: olay. Tarih bilgisi olayın tipini değil, sadece hassasiyetini değiştirir.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Alan</th><th>Açıklama</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Başlık</strong></td><td>Zorunlu tek alan. “Malazgirt Savaşı”</td></tr>
+          <tr><td><strong>Tarih</strong></td><td>Tam tarih / sadece yıl / hiç yok — üçü de geçerli</td></tr>
+          <tr><td><strong>Aralık</strong></td><td>Başlangıç–bitiş verilebilir. <span class="num">1919–1922</span></td></tr>
+          <tr><td><strong>Yaklaşık</strong></td><td>Kesin değilse <code>~</code> işaretiyle gösterilir</td></tr>
+          <tr><td><strong>Not</strong></td><td>Kartın içinde serbest açıklama. Sorulmaz.</td></tr>
+          <tr><td><strong>Etiketler</strong></td><td>Filtreleme için. “savaş”, “antlaşma”, “kongre”</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lede">Milattan önce tarih yok — bütün yıllar pozitif, sıralama tek yönlü.</p>
+  </section>
+
+  <section>
+    <h2>Kapsam</h2>
+    <p class="lede">Tarih aralığı olan bir olay, kendi aralığına düşen başka olayları içeriyorsa kart olarak değil, <strong>solda yuvarlak uçlu köşeli parantez</strong> olarak çizilir. Yazısı dikey durur ve kaydırdıkça görüş alanında kalır.</p>
+    <ul>
+      <li>Ayrı bir tür değil — sadece aralığı olan bir olay. İçi boşsa normal kart olur.</li>
+      <li>Parantez kendisi de bir olay olduğu için çalışmada sorulabilir: <em>“Kurtuluş Savaşı ne zaman başladı?”</em></li>
+      <li>Parantez katlanabilir: 50 olay tek satıra iner — <code>Kurtuluş Savaşı 1919–1922 · 50 olay</code></li>
+      <li>İç içe en fazla <strong>3 seviye</strong>. Daha derini telefonda ekranı yer.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Grup</h2>
+    <p class="lede">Tarihi önemsiz, sadece sırası önemli olaylar için. Grubun kendi konumu zaman çizelgesinde, grubun içinde ise sadece <span class="num">1, 2, 3</span> sırası vardır.</p>
+  </section>
+
+  <section>
+    <h2>Bağ</h2>
+    <p class="lede">Bir olayın ardından ne olduğunu anlatır. Bir veya birkaç olaydan çıkıp tek bir olaya gider — I. ve II. İnönü'nün <em>ikisinin birden</em> ardından İsmet Bey'in Dışişleri'ne geçmesi gibi.</p>
+    <ul>
+      <li>Bağın ucundaki kutu <strong>gerçek bir olaydır</strong>: tarihi olabilir. Tarih girilirse listede kendi yerine oturur, yine de okla kaynağına bağlı kalır.</li>
+      <li>Tarih girilmezse kaynağının hemen altında durur.</li>
+      <li>Tek çeşit ok: <em>“ardından”</em>. Sebep/ilgili gibi çeşitler sonra eklenebilir.</li>
+      <li>Bağın kendisi soru üretir: <em>“İsmet Bey'in Dışişleri'ne geçmesi hangi olayların ardından oldu?”</em></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Sıralama ve geri alma</h2>
+    <p class="lede">Tarihi olanlar kendiliğinden yerine oturur; tarihsizleri sen sürükleyip araya bırakırsın. Ekleme noktaları (<code>⊕</code>) ve sürükleme tutamakları normalde gizlidir, <strong>Düzenle</strong>'ye basınca belirir. Listenin sonundaki büyük <code>+</code> her zaman durur.</p>
+    <p class="lede">Her değişiklik — ekleme, silme, taşıma, düzenleme — merkezi bir işlem geçmişine yazılır ve <strong>geri alınabilir</strong>. Bu sonradan eklenecek bir özellik değil, baştan böyle kurulmalı.</p>
+  </section>
+
+  <section>
+    <h2>Profiller</h2>
+    <p class="lede">İlk açılışta “Kim çalışıyor?” diye sorar. Seçim hatırlanır; sonraki açılışlarda soru sorulmaz, en son kim seçildiyse onunla açılır. Üstteki isme dokunarak değiştirilir, o da yeni varsayılan olur.</p>
+    <ul>
+      <li><strong>Olaylar ortak, ilerleme kişiye özel.</strong> Onur'un 5. seviyeye çıkardığı bir olay Fatma'da 1. seviyede olabilir.</li>
+      <li>Şu an iki kişi, ama panelden yeni kullanıcı eklenir, silinir, adı değiştirilir.</li>
+      <li>PIN yok — profil değiştirme tek dokunuş.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Bilgi seviyesi</h2>
+    <p class="lede">Beş basamak. Kart rengi ve yanındaki halka, <em>o an seçili profilin</em> o olayı ne kadar bildiğini gösterir. Profil değişince tüm liste anında yeniden renklenir — nerede zayıf olduğun tek bakışta görünür.</p>
+    <div class="panel scale">
+      <div class="scale-row lv1">
+        <span class="ring"><i class="on"></i><i></i><i></i><i></i><i></i></span>
+        <span class="name" style="color:var(--text)">Yeni / bilmiyor</span>
+        <span class="when">her gün</span>
+      </div>
+      <div class="scale-row lv2">
+        <span class="ring"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span>
+        <span class="name" style="color:var(--text)">Zayıf</span>
+        <span class="when">2 gün sonra</span>
+      </div>
+      <div class="scale-row lv3">
+        <span class="ring"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>
+        <span class="name" style="color:var(--text)">Orta</span>
+        <span class="when">4 gün sonra</span>
+      </div>
+      <div class="scale-row lv4">
+        <span class="ring"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>
+        <span class="name" style="color:var(--text)">İyi</span>
+        <span class="when">8 gün sonra</span>
+      </div>
+      <div class="scale-row lv5">
+        <span class="ring"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span>
+        <span class="name" style="color:var(--text)">Kesin biliyor</span>
+        <span class="when">15+ gün sonra</span>
+      </div>
+    </div>
+    <p class="lede">Doğru cevap bir üst basamağa çıkarır ve tekrarı ileri atar; yanlış cevap aşağı düşürür ve yarın tekrar karşına getirir. Kırmızı bilerek yok — “yanlış yaptın” değil, “henüz öğrenmedin” demek.</p>
+    <p class="lede"><strong>Her olayda tek değil iki puan tutulur:</strong> <em>tarih bilgisi</em> (sadece tarihi olanlarda) ve <em>sıra bilgisi</em> (hepsinde). 1071'in tarihini bilmek ile 1071'in nereye düştüğünü bilmek ayrı şeyler.</p>
+  </section>
+
+  <section>
+    <h2>Çalışma</h2>
+    <p class="lede">Ana ekrandaki “Bugün 14 tekrar var” rozetine basınca karışık bir seans başlar. Vadesi gelenler arasından <strong>zayıf seviyedekiler daha sık ve daha önce</strong> sorulur; iyi bilinenler seyrek karışır. 300 olay girsen bile günde 15–20 soru çıkar.</p>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Mod</th><th>Ne yapar</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Araya yerleştirme</strong></td><td>“Malazgirt hangi iki olay arasında oldu?” — tarihsiz olaylar için de çalışır. Ana soru tipi.</td></tr>
+          <tr><td><strong>Tarih sorma</strong></td><td>“Cumhuriyet ne zaman ilan edildi?” — sadece tarihi olan olaylarda.</td></tr>
+          <tr><td><strong>Sıraya dizme</strong></td><td>4–5 kart karışık gelir, doğru sıraya sürüklenir.</td></tr>
+          <tr><td><strong>Tarih gizleme</strong></td><td>Normal kronoloji ekranı, tarihler kapalı. Dokununca açılır.</td></tr>
+          <tr><td><strong>Bağ sorusu</strong></td><td>“Bu olayların ardından ne oldu?” — oklardan üretilir.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lede">Seans sonunda özet: kaç doğru, kaç yanlış, hangi olaylar seviye atladı.</p>
+  </section>
+
+  <section>
+    <h2>Veri ve senkron</h2>
+    <p class="lede">Firebase. Telefonda girdiğin olay bilgisayarda anında görünür, ilerleme her yerde aynı. Firestore'un çevrimdışı desteği açık olur — internetsiz de çalışır, bağlanınca senkronlar.</p>
+    <div class="panel">
+      <h3>Kabaca düzen</h3>
+      <ul>
+        <li><code>listeler</code> — “İnkılap Tarihi”, “Osmanlı Kuruluş”</li>
+        <li><code>olaylar</code> — başlık, tarih, aralık, ~, not, sıra, kapsam, grup, bağ, etiketler</li>
+        <li><code>profiller</code> — Onur, Fatma, sonradan eklenenler</li>
+        <li><code>ilerleme</code> — (profil × olay) başına: seviye, sonraki tarih, doğru/yanlış sayısı</li>
+      </ul>
+    </div>
+    <p class="lede"><strong>Bilinmesi gereken:</strong> profiller hesap değil, veri. Şifreli giriş yok, uygulamanın adresi elinde olan herkes veriyi görür ve değiştirebilir. Aile/arkadaş çevresi için sorun değil; gerçekten yabancılar kullanmaya başlarsa tek bir “ev şifresi” eklemek yeterli olur.</p>
+  </section>
+
+  <section>
+    <h2>Dışa ve içe aktarım</h2>
+    <p class="lede">İki ayrı amacı var, o yüzden iki biçimde çıkar:</p>
+    <ul>
+      <li><strong>Yedek dosyası</strong> — geri yüklendiğinde her şeyi aynen kurar.</li>
+      <li><strong>Okunabilir metin</strong> — kopyalayıp yapay zekaya yapıştırıp “yanlış tarih var mı?” diye sorabilmen için.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Teknoloji</h2>
+    <p class="lede">Web uygulaması (PWA). Tek kod tabanı; telefonda ana ekrana eklenince uygulama gibi açılır, bilgisayarda tarayıcıda aynı görünür. Uygulama mağazası derdi yok, ücretsiz yayınlanır.</p>
+    <p class="lede">Geniş ekranda dağılmaması için tek sütun ortalanır ve maksimum genişliği sınırlanır — telefon düzeninin ferah hali.</p>
+  </section>
+
+  <section>
+    <h2>Yapım sırası</h2>
+    <p class="lede">Her adımın sonunda elinde kullanılabilir bir uygulama olur; sonrakini beklemene gerek kalmaz.</p>
+    <div class="phases">
+      <div class="phase">
+        <div class="phase-num">1</div>
+        <div class="phase-body">
+          <h3>Temel</h3>
+          <p>Profil seçimi, liste, olay ekle/düzenle/sil, kart görünümü, elle sıralama, geri al, gruplar, kapsam parantezi, bağlar.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">2</div>
+        <div class="phase-body">
+          <h3>Firebase</h3>
+          <p>Her şey buluta taşınır, iki cihaz senkron olur, çevrimdışı çalışır.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">3</div>
+        <div class="phase-body">
+          <h3>Aktarım</h3>
+          <p>Yedek al / geri yükle, yapay zekaya kontrol ettirmek için okunabilir çıktı.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">4</div>
+        <div class="phase-body">
+          <h3>Çalışma modu</h3>
+          <p>Beş basamaklı sistem, günlük tekrar listesi, araya yerleştirme ve tarih soruları, kart renkleri.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">5</div>
+        <div class="phase-body">
+          <h3>Ekstra modlar</h3>
+          <p>Sıraya dizme oyunu, tarih gizleme, bağ soruları.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="phase-num">6</div>
+        <div class="phase-body">
+          <h3>Kolaylıklar</h3>
+          <p>Arama, filtre, etiketler, hazır tarih paketleri.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Sonra karar verilecek</h2>
+    <div class="open">
+      <p class="lede">Şimdilik varsayımla ilerliyorum, istediğin zaman değiştirilir:</p>
+      <ul>
+        <li>Aralık yazımı <code>1919–1922</code> biçiminde. <code>1919-22</code> da olabilir.</li>
+        <li>Tarih gizleme modu puanlamaya girmiyor, sadece bakma modu.</li>
+        <li>Hazır tarih paketlerinin içeriği (hangi dönemler, kaç olay).</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Plan burada bitiyor. Onaylarsan 1. fazdan başlanır.
+  </footer>
+
+</div>
