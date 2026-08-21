@@ -1,7 +1,10 @@
-const CACHE = 'kronolojim-v3';
+/* Çevrimdışı yedek. Önce ağdan alır, ancak internet yoksa kayıtlı kopyaya
+   düşer — böylece yeni sürüm bir sonraki açılışı beklemeden gelir. */
+const CACHE = 'kronolojim-v4';
 const ASSETS = [
   './', './index.html', './css/app.css', './icon.svg', './manifest.webmanifest',
-  './js/util.js', './js/model.js', './js/store.js', './js/firebase-config.js', './js/cloud.js', './js/srs.js', './js/app.js',
+  './js/util.js', './js/model.js', './js/store.js', './js/firebase-config.js',
+  './js/cloud.js', './js/srs.js', './js/app.js',
   './js/views/timeline.js', './js/views/editor.js', './js/views/study.js', './js/views/panels.js'
 ];
 
@@ -19,13 +22,17 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (new URL(e.request.url).origin !== location.origin) return;
+
   e.respondWith(
-    caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
-      if (res.ok && new URL(e.request.url).origin === location.origin) {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-      }
-      return res;
-    }).catch(() => caches.match('./index.html')))
+    fetch(e.request)
+      .then(res => {
+        if (res && res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, copy));
+        }
+        return res;
+      })
+      .catch(() => caches.match(e.request).then(hit => hit || caches.match('./index.html')))
   );
 });

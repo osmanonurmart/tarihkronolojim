@@ -195,7 +195,17 @@ K.app = (function () {
 
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+        navigator.serviceWorker.register('sw.js').then((reg) => {
+          // Arka planda yeni bir sürüm devraldıysa sayfayı bir kere tazeliyoruz,
+          // yoksa güncelleme bir sonraki açılışa kalıyor.
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            location.reload();
+          });
+          reg.update();
+        }).catch(() => {});
       });
     }
   }
