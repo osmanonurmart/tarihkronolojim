@@ -24,24 +24,29 @@ gibi açılır ve internetsiz çalışır.
 - **Olaylar** — gün / ay / yıl kutuları; boş bırakılanlar yok sayılır. Aralık
   (`1919-22`), yaklaşık (`~1300`), not.
 - **Sonucunda** — her kartın altında görünen sonuç metni; çalışırken de sorulur.
-- **Kapsam** — olay eklerken açılan kutudan oluşturulur; içine aldıklarını solda
-  yuvarlak uçlu parantezle toplar. Katlanabilir, en fazla üç seviye.
+- **Kapsam** — tarihsiz bir başlık; içindekileri solda yuvarlak uçlu parantezle
+  toplar. Kendi ekranında bütün kartlar tikle listelenir, iki işaret arası
+  kendiliğinden dolar. Katlanabilir, en fazla üç seviye.
+- **Numara** — her kartın sağ altında sırasını gösteren küçük bir sayı.
 - **Grup** — tarihi önemsiz, yalnız sırası önemli olaylar için.
 - **Sıralama** — tarihi olanlar kendiliğinden yerine oturur, gerisi elle taşınır.
   Her değişiklik geri alınabilir.
-- **Çalışma** — beş basamaklı tekrar sistemi; araya yerleştirme, tarih ve sonuç
-  soruları, zayıf olanlar önde.
+- **Çalışma** — beş basamaklı tekrar sistemi; araya yerleştirme, tarih, sonuç ve
+  “kapsam ne ile başladı” soruları. Zayıf olanlar önce seçilir, sorular karışık
+  gelir.
 - **Kör mod** — üstteki düğme tarihleri gizler, dokununca tek tek açılır.
 - **Tek görünüm** — uygulama her zaman karanlık, seçenek sunmuyor.
 - **Yedek** — dosya olarak indir/geri yükle, okunabilir metni kopyala, ya da
-  metin yapıştırıp içe aktar. Kopyalanan metin aynen geri yüklenebilir, yani
-  yapay zekaya kontrol ettirip düzeltilmiş halini geri koyabilirsin.
+  metin yapıştırıp içe aktar — kronolojik, sona, seçtiğin kartın altına ya da
+  listenin yerine. Kopyalanan metin aynen geri yüklenebilir, yani yapay zekaya
+  kontrol ettirip düzeltilmiş halini geri koyabilirsin.
 - **Bulut** — Firebase ile telefon ve bilgisayar eşitlenir; ayar gömülü geldiği
   için uygulamayı açan cihaz kendiliğinden bağlanır. Yalnızca değişen kayıtlar
   yollanır. Bulutta içerik varsa o kazanır, soru sorulmaz. İnternet yokken kart
   eklenip değiştirilemez ama günlük tekrar yapılabilir; ilerleme sonra yüklenir.
   Kendi projeni kurmak için: [`docs/firebase.md`](docs/firebase.md).
-- **Kayıt defteri** — son değişiklikler (kim, ne zaman, ne yaptı) Ayarlar'da.
+- **Kayıt defteri** — son değişiklikler Ayarlar'da kendi panelinde; bir satıra
+  dokununca neyin neye döndüğü açılır.
 
 ## Sırada ne var
 

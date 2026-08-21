@@ -53,6 +53,12 @@ K.store = (function () {
     }
 
     target.events.forEach((e) => {
+      // Kapsamın tarihi, notu, sonucu yok: o alanları taşımıyor.
+      if (e.isSpan) {
+        if (e.start || e.end) { e.start = null; e.end = null; e.approx = false; touched = true; }
+        if (e.note) { e.note = ''; touched = true; }
+        if (e.after) { e.after = ''; touched = true; }
+      }
       if (e.tags) { delete e.tags; touched = true; }
       if (e.linkFrom) { delete e.linkFrom; touched = true; }
       if (e.after === undefined) { e.after = ''; touched = true; }
@@ -112,7 +118,8 @@ K.store = (function () {
       ts: Date.now(),
       by: who ? who.name : '—',
       action: entry.action,
-      title: entry.title || ''
+      title: entry.title || '',
+      details: entry.details && entry.details.length ? entry.details : null
     });
     if (db.log.length > LOG_MAX) db.log.length = LOG_MAX;
   }

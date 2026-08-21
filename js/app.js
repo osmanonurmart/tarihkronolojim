@@ -17,9 +17,9 @@ K.app = (function () {
 
   /* ---- Eylemler ---- */
   const actions = {
-    profiles: () => K.panels.profiles(),
-    lists: () => K.panels.lists(),
-    settings: () => K.panels.settings(),
+    profiles: () => K.sheet.show(K.panels.profiles),
+    lists: () => K.sheet.show(K.panels.lists),
+    settings: () => K.sheet.show(K.panels.settings),
     samples: () => K.panels.samples(),
 
     undo: () => {
@@ -38,7 +38,7 @@ K.app = (function () {
       else d.ui.collapsed.push(el.dataset.id);
     }),
 
-    add: () => K.editor.open(null, {}),
+    add: () => K.sheet.show(() => K.editor.open(null, {})),
 
     'del-event': (el) => {
       const db = K.store.get();
@@ -52,14 +52,18 @@ K.app = (function () {
       if (ok) K.util.toast('Silindi', 'Geri al', () => K.store.undo());
     },
 
-    'open-event': (el) => K.editor.open(el.dataset.id),
-    'edit-group': (el) => K.editor.openGroup(el.dataset.id),
+    'open-event': (el) => {
+      const ev = K.model.byId(K.store.get(), el.dataset.id);
+      if (ev && K.model.isSpan(ev)) K.sheet.show(() => K.editor.openSpan(ev.id, {}));
+      else K.sheet.show(() => K.editor.open(el.dataset.id));
+    },
+    'edit-group': (el) => K.sheet.show(() => K.editor.openGroup(el.dataset.id)),
 
-    insert: (el) => K.editor.open(null, {
+    insert: (el) => K.sheet.show(() => K.editor.open(null, {
       parent: el.dataset.parent || null,
       group: el.dataset.group || null,
       order: parseFloat(el.dataset.order)
-    }),
+    })),
 
     study: () => { if (K.study.start()) render(); },
     'close-study': () => { K.study.quit(); render(); },

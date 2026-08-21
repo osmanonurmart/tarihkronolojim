@@ -51,7 +51,8 @@ K.study = (function () {
     }).join('');
 
     const kindLabel = q.kind === K.srs.KINDS.ORDER ? 'Araya yerleştirme'
-      : q.kind === K.srs.KINDS.AFTER ? 'Sonucunda' : 'Tarih';
+      : q.kind === K.srs.KINDS.AFTER ? 'Sonucunda'
+      : q.kind === K.srs.KINDS.START ? 'Kapsam' : 'Tarih';
     let verdict = '';
     if (answered) {
       const ok = session.answered === q.correctIndex;

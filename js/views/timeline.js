@@ -27,7 +27,7 @@ K.timeline = (function () {
       : '';
   }
 
-  function eventCard(db, ev) {
+  function eventCard(db, ev, no) {
     const lv = K.srs.levelOf(db, ev.id);
     const date = dateChip(db, ev);
 
@@ -37,6 +37,7 @@ K.timeline = (function () {
         '<div class="ev-top">' + date + ring(lv) + '</div>' +
         '<div class="ev-title">' + esc(ev.title) + '</div>' +
         (ev.note ? '<div class="ev-note">' + esc(ev.note) + '</div>' : '') +
+        '<span class="seq mono">' + no + '</span>' +
         (db.ui.editing ? '<button class="handle" data-handle aria-label="Taşı">⣿</button>' : '') +
       '</div>';
   }
@@ -51,13 +52,13 @@ K.timeline = (function () {
       '</div></div>';
   }
 
-  function groupBox(db, g) {
+  function groupBox(db, g, nums) {
     const evs = K.model.eventsOfGroup(db, g.id);
-    const rows = evs.map((ev, i) => {
+    const rows = evs.map((ev) => {
       const lv = K.srs.levelOf(db, ev.id);
       return '<div class="group-row l' + lv + '" data-node="ev:' + ev.id + '" data-act="open-event" data-id="' + ev.id + '" role="button" tabindex="0">' +
         killBtn(db, ev.id) +
-        '<span class="idx">' + (i + 1) + '</span>' +
+        '<span class="idx">' + (nums[ev.id] || '') + '</span>' +
         '<span>' + esc(ev.title) + '</span>' +
         ring(lv) +
         (db.ui.editing ? '<button class="handle" data-handle aria-label="Taşı">⣿</button>' : '') +
@@ -91,7 +92,7 @@ K.timeline = (function () {
     return '<button class="insert" ' + attrs + ' aria-label="Buraya olay ekle">+</button>';
   }
 
-  function container(db, parentId, depth) {
+  function container(db, parentId, depth, nums) {
     const nodes = K.model.childrenOf(db, parentId);
     const out = [];
     const key = parentId || 'root';
@@ -101,7 +102,7 @@ K.timeline = (function () {
       const prevOrder = i === 0 ? null : nodes[i - 1].order;
       out.push(insertBtn(db, { parent: parentId, order: K.model.orderBetween(prevOrder, node.order) }));
 
-      if (node.t === 'gr') { out.push(groupBox(db, node.gr)); continue; }
+      if (node.t === 'gr') { out.push(groupBox(db, node.gr, nums)); continue; }
 
       const ev = node.ev;
 
@@ -113,13 +114,14 @@ K.timeline = (function () {
             '<div class="collapsed-row" data-node="ev:' + ev.id + '">' +
             '<button class="collapsed-span" data-act="toggle-span" data-id="' + ev.id + '">' +
               '<span class="cs-title">' + esc(ev.title) + '</span>' +
-              '<span class="mono cs-meta">' + esc(K.model.fmtEvent(ev)) + ' · ' + count + ' olay</span>' +
+              '<span class="mono cs-meta">' + count + ' olay</span>' +
             '</button>' +
             '<button class="iconbtn" data-act="open-event" data-id="' + ev.id + '" aria-label="Düzenle">✎</button>' +
             '</div>'
           );
         } else {
-          const label = esc(ev.title + ' ' + K.model.fmtEvent(ev));
+          const label = esc(ev.title);
+          const slv = K.srs.levelOf(db, ev.id);
           out.push(
             '<div class="span-row" data-node="ev:' + ev.id + '">' +
               '<div class="gutter">' +
@@ -128,11 +130,11 @@ K.timeline = (function () {
                   ? '<button class="span-edit kill" data-act="del-event" data-id="' + ev.id + '" aria-label="Kapsamı sil">🗑</button>' +
                     '<button class="handle" data-handle aria-label="Taşı" style="position:static;transform:none;height:24px">⣿</button>'
                   : '') +
-                '<button class="bracket d' + depth + '" data-act="toggle-span" data-id="' + ev.id + '" aria-label="Kapsamı katla">' +
+                '<button class="bracket b' + slv + '" data-act="toggle-span" data-id="' + ev.id + '" aria-label="Kapsamı katla">' +
                   '<span class="label">' + label + '</span>' +
                 '</button>' +
               '</div>' +
-              '<div class="kids" data-kids="' + ev.id + '">' + container(db, ev.id, depth + 1).join('') + '</div>' +
+              '<div class="kids" data-kids="' + ev.id + '">' + container(db, ev.id, depth + 1, nums).join('') + '</div>' +
             '</div>'
           );
         }
@@ -140,7 +142,7 @@ K.timeline = (function () {
         continue;
       }
 
-      out.push(eventCard(db, ev));
+      out.push(eventCard(db, ev, nums[ev.id] || ''));
       out.push(consequence(db, ev));
     }
 
@@ -196,7 +198,7 @@ K.timeline = (function () {
       '</div>' +
       dueBar(db) +
       (has
-        ? '<div class="stream kids" data-kids="root">' + container(db, null, 1).join('') + '</div>'
+        ? '<div class="stream kids" data-kids="root">' + container(db, null, 1, K.model.numbering(db)).join('') + '</div>'
         : emptyState()) +
       (has ? '<button class="fab" data-act="add" aria-label="Olay ekle">+</button>' : '') +
     '</div>';
@@ -217,10 +219,16 @@ K.timeline = (function () {
     const [t, id] = node.split(':');
     const db = K.store.get();
     const item = t === 'ev' ? K.model.byId(db, id) : db.groups.find((g) => g.id === id);
+    const from = t === 'ev' ? K.model.positionOf(db, id) : null;
+
     K.store.mutate((d) => {
       const target = t === 'ev' ? d.events.find((e) => e.id === id) : d.groups.find((g) => g.id === id);
       if (target) target.order = order;
-    }, { action: 'sırası değişti', title: item ? (item.title || item.name) : '' });
+    }, {
+      action: 'taşındı',
+      title: item ? (item.title || item.name) : '',
+      details: from ? [{ k: 'Sıra', from: String(from), to: String(K.model.positionOf(K.store.get(), id) || '?') }] : []
+    });
   }
 
   function onPointerDown(e) {

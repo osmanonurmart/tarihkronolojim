@@ -145,6 +145,18 @@ K.model = (function () {
 
   function byId(db, id) { return db.events.find((e) => e.id === id) || null; }
 
+  /* Kapsamlar birer başlık, kart değil: numaraya, soruya ve komşuluğa girmezler. */
+  function cards(db) { return flatten(db, null).filter((e) => !isSpan(e)); }
+
+  /* Kartların ekranda göründükleri sıraya göre 1'den başlayan numaraları. */
+  function numbering(db) {
+    const map = {};
+    cards(db).forEach((e, i) => { map[e.id] = i + 1; });
+    return map;
+  }
+
+  function positionOf(db, id) { return numbering(db)[id] || null; }
+
   function blank(listId) {
     return {
       id: K.util.uid(), listId: listId, title: '',
@@ -154,9 +166,26 @@ K.model = (function () {
     };
   }
 
+  /* Kapsamın tarihi yok — yılı önemliyse adına yazılır. */
+  function blankSpan(listId) {
+    return Object.assign(blank(listId), { isSpan: true });
+  }
+
+  function membersOf(db, spanId) {
+    return listEvents(db).filter((e) => e.parentId === spanId);
+  }
+
+  /* Kapsam listede ilk üyesinin yerinde durur. */
+  function spanOrder(db, spanId) {
+    const kids = membersOf(db, spanId).concat(listGroups(db).filter((g) => g.parentId === spanId));
+    if (!kids.length) return null;
+    return Math.min.apply(null, kids.map((k) => k.order)) - 1;
+  }
+
   return {
     MONTHS, MONTHS_LONG, MAX_DEPTH, key, fmtOne, fmtRange, fmtEvent, parseDate,
     listEvents, listGroups, isSpan, depthOf, childrenOf, eventsOfGroup,
-    orderBetween, orderForDate, spanOptions, isDescendant, flatten, byId, blank
+    orderBetween, orderForDate, spanOptions, isDescendant, flatten, byId, blank,
+    blankSpan, cards, numbering, positionOf, membersOf, spanOrder
   };
 })();

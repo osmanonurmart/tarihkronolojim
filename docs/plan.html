@@ -525,13 +525,20 @@
 
   <section>
     <h2>Kapsam</h2>
-    <p class="lede">Bir olay <strong>solda yuvarlak uçlu köşeli parantez</strong> olarak çizilebilir. Yazısı dikey durur ve kaydırdıkça görüş alanında kalır.</p>
+    <p class="lede">Bir başlık, <strong>solda yuvarlak uçlu köşeli parantez</strong> olarak çizilir. Yazısı dikey durur ve kaydırdıkça görüş alanında kalır. Parantezin rengi kapsamın bilgi seviyesini gösterir.</p>
     <ul>
-      <li>Kendiliğinden olmaz: kapsamlar olay eklerken açılan kutudan oluşturulur, bir kart ancak sen seçersen içine girer.</li>
+      <li><strong>Tarihi yok.</strong> Yıl önemliyse adına yazılır: “Kurtuluş Savaşı (1919-22)”. Notu ve sonucu da yok — kapsam bir olay değil, bir başlık.</li>
+      <li>Kendi ekranında listedeki bütün kartlar tikleriyle görünür; iki kart işaretlenince arası kendiliğinden dolar. Liste kendi içinde kayar, üstünde arama kutusu vardır.</li>
+      <li>Kendiliğinden oluşmaz: bir karta aralık vermek onu kapsam yapmaz.</li>
       <li>Parantez kendisi de bir olay olduğu için çalışmada sorulabilir: <em>“Kurtuluş Savaşı ne zaman başladı?”</em></li>
       <li>Parantez katlanabilir: 50 olay tek satıra iner — <code>Kurtuluş Savaşı 1919–1922 · 50 olay</code></li>
       <li>İç içe en fazla <strong>3 seviye</strong>. Daha derini telefonda ekranı yer.</li>
     </ul>
+  </section>
+
+  <section>
+    <h2>Numara</h2>
+    <p class="lede">Her kartın sağ altında küçük bir sayı. 1'den başlar, liste her değiştiğinde kendini günceller. Birine bir şey anlatırken işe yarar. Kapsamlar numara almaz.</p>
   </section>
 
   <section>
@@ -612,9 +619,11 @@
           <tr><td><strong>Sıraya dizme</strong></td><td>4–5 kart karışık gelir, doğru sıraya sürüklenir.</td></tr>
           <tr><td><strong>Tarih gizleme</strong></td><td>Normal kronoloji ekranı, tarihler kapalı. Dokununca açılır.</td></tr>
           <tr><td><strong>Sonucunda</strong></td><td>“II. İnönü Savaşı sonucunda ne oldu?” — kartların sonuç metinlerinden üretilir.</td></tr>
+          <tr><td><strong>Kapsam</strong></td><td>“Kurtuluş Savaşı ne ile başladı?” — kapsamın tek sorusu. Kapsam başka hiçbir soruya girmez.</td></tr>
         </tbody>
       </table>
     </div>
+    <p class="lede">Sorular <strong>karışık gelir</strong>. Seçim zayıftan güçlüye, ama soruluş sırası rastgele — liste sırasına göre gelen sorular ezberi sahteleştiriyor.</p>
     <p class="lede">Seans sonunda özet: kaç doğru, kaç yanlış, hangi olaylar seviye atladı.</p>
   </section>
 
@@ -626,7 +635,7 @@
       <ul>
         <li><code>listeler</code> — “İnkılap Tarihi”, “Osmanlı Kuruluş”</li>
         <li><code>olaylar</code> — başlık, tarih, aralık, ~, not, sonuç, sıra, kapsam, grup</li>
-        <li><code>kayıt</code> — son değişiklikler: kim, ne zaman, ne yaptı</li>
+        <li><code>kayıt</code> — son değişiklikler: kim, ne zaman, ne yaptı, neyin neye döndüğü</li>
         <li><code>profiller</code> — Onur, Fatma, sonradan eklenenler</li>
         <li><code>ilerleme</code> — (profil × olay) başına: seviye, sonraki tarih, doğru/yanlış sayısı</li>
       </ul>

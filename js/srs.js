@@ -4,7 +4,7 @@ window.K = window.K || {};
 K.srs = (function () {
   const INTERVALS = { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 };   // seviye -> kaç gün sonra
   const SESSION_MAX = 20;
-  const KINDS = { DATE: 'date', ORDER: 'order', AFTER: 'after' };
+  const KINDS = { DATE: 'date', ORDER: 'order', AFTER: 'after', START: 'start' };
 
   const pkey = (profileId, eventId, kind) => profileId + '|' + eventId + '|' + kind;
 
@@ -14,8 +14,10 @@ K.srs = (function () {
   }
 
   function levelOf(db, eventId) {
-    // Kartın rengi puanların en düşüğünü gösterir: zayıf taraf öne çıksın.
     const ev = K.model.byId(db, eventId);
+    // Kapsamın tek sorusu var: ne ile başladığı.
+    if (ev && K.model.isSpan(ev)) return rec(db, eventId, KINDS.START).level;
+    // Kartın rengi puanların en düşüğünü gösterir: zayıf taraf öne çıksın.
     let level = rec(db, eventId, KINDS.ORDER).level;
     if (ev && ev.start) level = Math.min(level, rec(db, eventId, KINDS.DATE).level);
     if (ev && ev.after) level = Math.min(level, rec(db, eventId, KINDS.AFTER).level);
@@ -34,10 +36,19 @@ K.srs = (function () {
 
   /* Bugün sorulabilecek (olay, tip) çiftleri. Hiç çalışılmamışlar da dahil. */
   function dueItems(db) {
-    const flat = K.model.flatten(db, null);
+    const flat = K.model.cards(db);            // kapsamlar kart değil
     const today = K.util.todayISO();
     const items = [];
     const withAfter = flat.filter((e) => e.after).length;
+
+    // Kapsamlar yalnız "ne ile başladı" sorusunun öznesi olabilir.
+    if (flat.length >= 4) {
+      K.model.listEvents(db).filter((e) => K.model.isSpan(e)).forEach((sp) => {
+        if (!firstInside(db, sp)) return;
+        const r = rec(db, sp.id, KINDS.START);
+        if (!r.due || r.due <= today) items.push({ ev: sp, kind: KINDS.START, level: r.level, due: r.due });
+      });
+    }
 
     flat.forEach((ev, i) => {
       // Sıra sorusu için etrafında yeterli olay olmalı.
@@ -65,6 +76,30 @@ K.srs = (function () {
   function dueCount(db) { return dueItems(db).length; }
 
   /* ---- Soru üretimi ---- */
+
+  function firstInside(db, span) {
+    const inside = K.model.flatten(db, span.id).filter((e) => !K.model.isSpan(e));
+    return inside.length ? inside[0] : null;
+  }
+
+  function buildStartQuestion(db, span, flat) {
+    const first = firstInside(db, span);
+    if (!first) return null;
+
+    const pool = flat.filter((e) => e.id !== first.id);
+    if (pool.length < 3) return null;
+    const wrong = K.util.shuffle(pool).slice(0, 3).map((e) => e.title);
+    const options = K.util.shuffle([first.title].concat(wrong));
+
+    return {
+      kind: KINDS.START,
+      ev: span,
+      text: '<span class="subject">' + K.util.esc(span.title) + '</span> ne ile başladı?',
+      options: options,
+      correctIndex: options.indexOf(first.title),
+      render: (o) => K.util.esc(o)
+    };
+  }
 
   function neighborLabel(ev) {
     if (!ev) return null;
@@ -191,7 +226,7 @@ K.srs = (function () {
 
   /* Bir seans: en fazla 20 soru, zayıflar önde. */
   function buildSession(db) {
-    const flat = K.model.flatten(db, null);
+    const flat = K.model.cards(db);
     const items = dueItems(db);
     const qs = [];
     const used = new Set();
@@ -202,12 +237,15 @@ K.srs = (function () {
       if (used.has(sig)) continue;
       const q = it.kind === KINDS.ORDER ? buildOrderQuestion(db, it.ev, flat)
         : it.kind === KINDS.AFTER ? buildAfterQuestion(db, it.ev, flat)
+        : it.kind === KINDS.START ? buildStartQuestion(db, it.ev, flat)
         : buildDateQuestion(db, it.ev, flat);
       if (!q) continue;
       used.add(sig);
       qs.push(q);
     }
-    return qs;
+    // Seçim zayıftan güçlüye, ama soruluş sırası karışık: liste sırasına göre
+    // gelen sorular ezberi sahteleştiriyor.
+    return K.util.shuffle(qs);
   }
 
   return { KINDS, INTERVALS, SESSION_MAX, rec, levelOf, record, dueItems, dueCount, buildSession };

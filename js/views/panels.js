@@ -83,7 +83,14 @@ K.panels = (function () {
       '</div>' +
 
       cloudSection() +
-      logSection() +
+
+      '<div class="field">' +
+        '<button class="rowbtn" id="s-log" type="button">' +
+          '<span>Son değişiklikler</span>' +
+          '<span class="badge">' + (K.store.get().log || []).length + '</span>' +
+          '<span class="chev">›</span>' +
+        '</button>' +
+      '</div>' +
 
       '<div class="field">' +
         '<label>Tehlikeli</label>' +
@@ -95,6 +102,7 @@ K.panels = (function () {
         root.querySelector('#s-copy').addEventListener('click', copyText);
         root.querySelector('#s-import').addEventListener('change', importFile);
         root.querySelector('#s-paste').addEventListener('click', importText);
+        root.querySelector('#s-log').addEventListener('click', () => K.sheet.push(logPanel));
         root.querySelector('#s-reset').addEventListener('click', () => {
           if (!K.util.confirmAsk('Bütün listeler, olaylar ve ilerleme silinecek. Emin misin?')) return;
           localStorage.removeItem('kronolojim.v1');
@@ -132,30 +140,59 @@ K.panels = (function () {
   }
 
   /* ---- Kayıt defteri ---- */
-  function logSection() {
-    const db = K.store.get();
-    const rows = (db.log || []).slice(0, 20).map((e) => {
-      const t = new Date(e.ts);
-      const when = t.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) +
-        ' ' + t.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-      return '<div class="log-row">' +
-        '<span class="log-when mono">' + esc(when) + '</span>' +
-        '<span class="log-who">' + esc(e.by) + '</span>' +
-        '<span class="log-what">' + esc(e.title ? '"' + e.title + '" ' + e.action : e.action) + '</span>' +
-      '</div>';
-    }).join('');
-
-    const count = (db.log || []).length;
-    return '<div class="field">' +
-      '<details class="fold">' +
-        '<summary>Son değişiklikler' + (count ? ' <span class="badge">' + count + '</span>' : '') + '</summary>' +
-        (rows ? '<div class="log">' + rows + '</div>'
-              : '<div class="hint">Henüz bir değişiklik yok.</div>') +
-        '<div class="hint">Günlük tekrarlar buraya yazılmaz — sadece kart ekleme, değiştirme ve silme.</div>' +
-      '</details>' +
-    '</div>';
+  function when(ts) {
+    const t = new Date(ts);
+    return t.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) + ' ' +
+           t.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
   }
 
+  function logPanel() {
+    const db = K.store.get();
+    const rows = (db.log || []).map((e) =>
+      '<button class="log-row" data-log="' + e.id + '" type="button">' +
+        '<span class="log-when mono">' + esc(when(e.ts)) + '</span>' +
+        '<span class="log-who">' + esc(e.by) + '</span>' +
+        '<span class="log-what">' + esc(e.title ? '"' + e.title + '" ' + e.action : e.action) + '</span>' +
+        (e.details ? '<span class="chev">›</span>' : '') +
+      '</button>').join('');
+
+    K.sheet.open(
+      '<h2>Son değişiklikler</h2>' +
+      (rows ? '<div class="log">' + rows + '</div>'
+            : '<div class="hint">Henüz bir değişiklik yok.</div>') +
+      '<div class="hint" style="margin-top:.7rem">En yeni üstte. Günlük tekrarlar buraya yazılmaz — ' +
+      'sadece kart ekleme, değiştirme, taşıma ve silme.</div>',
+      function (root) {
+        root.addEventListener('click', (e) => {
+          const b = e.target.closest('[data-log]');
+          if (!b) return;
+          const rec = (K.store.get().log || []).find((x) => x.id === b.getAttribute('data-log'));
+          if (rec && rec.details) K.sheet.push(() => logDetail(rec.id));
+        });
+      }
+    );
+  }
+
+  function logDetail(id) {
+    const rec = (K.store.get().log || []).find((x) => x.id === id);
+    if (!rec) { K.sheet.back(); return; }
+
+    K.sheet.open(
+      '<h2>Değişiklik</h2>' +
+      '<div class="hint" style="margin-bottom:.2rem">' + esc(rec.by) + ' · ' + esc(when(rec.ts)) + '</div>' +
+      '<p style="margin-bottom:1rem">' + esc(rec.title ? '"' + rec.title + '" ' + rec.action : rec.action) + '</p>' +
+      '<div class="diff">' +
+        (rec.details || []).map((d) =>
+          '<div class="diff-row">' +
+            '<span class="diff-k">' + esc(d.k) + '</span>' +
+            '<span class="diff-v"><s>' + esc(d.from) + '</s> → <b>' + esc(d.to) + '</b></span>' +
+          '</div>').join('') +
+      '</div>'
+    );
+  }
+
+  /* Yapıştırılan metni önce sayar, sonra aktarır — ne geleceğini görmeden
+     listenin üstüne yazmak istemezsin. */
   /* ---- Aktarım ---- */
   function exportFile() {
     const db = K.store.get();
@@ -181,12 +218,15 @@ K.panels = (function () {
           return;
         }
         const ev = node.ev;
+        if (K.model.isSpan(ev)) {
+          lines.push(pad + '- ' + ev.title + '  (kapsam — altındakiler bunun içinde)');
+          walk(ev.id, depth + 1);
+          return;
+        }
         const date = K.model.fmtEvent(ev);
-        const span = K.model.isSpan(ev) ? '  (kapsam — altındakiler bu aralığın içinde)' : '';
         lines.push(pad + '- ' + (date ? date + ' — ' : '(tarihsiz) ') + ev.title +
-                   (ev.note ? ' — ' + ev.note : '') + span);
+                   (ev.note ? ' — ' + ev.note : ''));
         if (ev.after) lines.push(pad + '  ↳ sonucunda: ' + ev.after);
-        if (K.model.isSpan(ev)) walk(ev.id, depth + 1);
       });
     }
     walk(null, 0);
@@ -221,9 +261,7 @@ K.panels = (function () {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (!data || !Array.isArray(data.events) || !Array.isArray(data.lists)) {
-          throw new Error('biçim');
-        }
+        if (!data || !Array.isArray(data.events) || !Array.isArray(data.lists)) throw new Error('biçim');
         K.store.replaceAll(data);
         K.sheet.close();
         K.util.toast('Yedek yüklendi', 'Geri al', () => K.store.undo());
@@ -234,73 +272,156 @@ K.panels = (function () {
     reader.readAsText(file);
   }
 
-  /* Yapıştırılan metni önce sayar, sonra aktarır — ne geleceğini görmeden
-     listenin üstüne yazmak istemezsin. */
+  const MODES = [
+    { id: 'chrono',  ad: 'Kronolojik yerleştir', not: 'Yılı olan satır doğru yerine oturur' },
+    { id: 'end',     ad: 'Sonuna ekle',          not: 'Listenin altına eklenir' },
+    { id: 'after',   ad: 'Şu kartın altına',     not: 'İşaretlediğin kartın hemen ardına' },
+    { id: 'replace', ad: 'Listenin yerine',      not: 'Bu listedeki her şey silinir' }
+  ];
+
   function importText() {
+    let mode = 'chrono';
+    let anchor = null;
+    let parsed = { events: [], groups: [], skipped: 0 };
+
     K.sheet.open(
       '<h2>İçe aktar</h2>' +
       '<p class="hint" style="margin-bottom:.7rem">Her satır bir olay. Tarih başta ya da sonda olabilir; ' +
       'yoksa olay tarihsiz olur. Uygulamanın kendi kopyaladığı metni de olduğu gibi yapıştırabilirsin.</p>' +
       '<div class="field">' +
-        '<textarea id="i-text" style="min-height:9rem;font-size:.85rem" placeholder="1071 - Malazgirt Savaşı&#10;19.05.1919 - Samsun\'a Çıkış&#10;1919-1922 - Kurtuluş Savaşı"></textarea>' +
+        '<textarea id="i-text" style="min-height:8rem;font-size:.85rem" placeholder="1071 - Malazgirt Savaşı&#10;19.05.1919 - Samsun\'a Çıkış&#10;1919-1922 - Kurtuluş Savaşı"></textarea>' +
         '<div class="hint" id="i-count">Henüz bir şey yapıştırılmadı.</div>' +
       '</div>' +
       '<div class="field">' +
-        '<label>Nasıl</label>' +
-        '<div class="seg" id="i-mode">' +
-          '<button type="button" data-mode="add" class="on">Listeye ekle</button>' +
-          '<button type="button" data-mode="replace">Listenin yerine</button>' +
+        '<label>Nasıl eklensin</label>' +
+        '<div class="pick" id="i-mode">' +
+          MODES.map((m) => '<button class="pick-row ' + (m.id === mode ? 'on' : '') + '" data-mode="' + m.id + '" type="button">' +
+            '<span style="flex:1;text-align:left"><b>' + m.ad + '</b><br><span class="hint">' + m.not + '</span></span>' +
+          '</button>').join('') +
         '</div>' +
+        '<div id="i-anchor"></div>' +
       '</div>' +
       '<div class="sheet-actions">' +
         '<button class="btn primary grow" id="i-go" type="button">Aktar</button>' +
       '</div>',
       function (root) {
-        const box = root.querySelector('#i-text');
-        const count = root.querySelector('#i-count');
-        let mode = 'add';
-        let parsed = { events: [], groups: [], skipped: 0 };
+        const $ = (sel) => root.querySelector(sel);
+        const box = $('#i-text');
 
         function recount() {
           parsed = K.textimport.parse(box.value);
-          if (!box.value.trim()) { count.textContent = 'Henüz bir şey yapıştırılmadı.'; return; }
+          if (!box.value.trim()) { $('#i-count').textContent = 'Henüz bir şey yapıştırılmadı.'; return; }
           const spans = parsed.events.filter((e) => e.isSpan).length;
           const dated = parsed.events.filter((e) => e.start).length;
-          count.textContent = parsed.events.length + ' olay (' + dated + ' tanesi tarihli)' +
+          $('#i-count').textContent = parsed.events.length + ' olay (' + dated + ' tanesi tarihli)' +
             (parsed.groups.length ? ', ' + parsed.groups.length + ' grup' : '') +
             (spans ? ', ' + spans + ' kapsam' : '') +
             (parsed.skipped ? ' · ' + parsed.skipped + ' satır anlaşılamadı' : '');
         }
-
         box.addEventListener('input', recount);
 
-        root.querySelector('#i-mode').addEventListener('click', (e) => {
+        function anchorPicker() {
+          const holder = $('#i-anchor');
+          if (mode !== 'after') { holder.innerHTML = ''; return; }
+          const db = K.store.get();
+          const cards = K.model.cards(db);
+          const nums = K.model.numbering(db);
+
+          function rows(q) {
+            const needle = q.toLocaleLowerCase('tr');
+            const shown = needle ? cards.filter((e) => e.title.toLocaleLowerCase('tr').indexOf(needle) >= 0) : cards;
+            if (!shown.length) return '<div class="hint" style="padding:.6rem">Eşleşen kart yok.</div>';
+            return shown.map((e) =>
+              '<button class="member ' + (anchor === e.id ? 'on' : '') + '" data-anchor="' + e.id + '" type="button">' +
+                '<span class="box">' + (anchor === e.id ? '✓' : '') + '</span>' +
+                '<span class="mono num">' + (nums[e.id] || '') + '</span>' +
+                '<span class="m-title">' + esc(e.title) + '</span>' +
+                '<span class="mono m-date">' + esc(K.model.fmtEvent(e)) + '</span>' +
+              '</button>').join('');
+          }
+
+          holder.innerHTML = '<div class="memberbox" style="margin-top:.5rem">' +
+            '<div class="member-search"><input type="text" id="i-q" placeholder="Ara…" autocomplete="off"></div>' +
+            '<div class="member-list" id="i-list">' + rows('') + '</div></div>';
+
+          holder.querySelector('#i-q').addEventListener('input', (e) => {
+            holder.querySelector('#i-list').innerHTML = rows(e.target.value);
+          });
+          holder.querySelector('#i-list').addEventListener('click', (e) => {
+            const b = e.target.closest('[data-anchor]');
+            if (!b) return;
+            anchor = b.getAttribute('data-anchor');
+            holder.querySelector('#i-list').innerHTML = rows(holder.querySelector('#i-q').value);
+          });
+        }
+
+        $('#i-mode').addEventListener('click', (e) => {
           const b = e.target.closest('[data-mode]');
           if (!b) return;
           mode = b.getAttribute('data-mode');
-          Array.prototype.forEach.call(root.querySelector('#i-mode').children,
+          Array.prototype.forEach.call($('#i-mode').children,
             (c) => c.classList.toggle('on', c === b));
+          anchorPicker();
         });
 
-        root.querySelector('#i-go').addEventListener('click', () => {
+        $('#i-go').addEventListener('click', () => {
           recount();
           if (!parsed.events.length && !parsed.groups.length) {
             K.util.toast('Aktarılacak bir şey bulunamadı.');
             return;
           }
+          if (mode === 'after' && !anchor) {
+            K.util.toast('Önce altına ekleyeceğin kartı işaretle.');
+            return;
+          }
+
           const ok = K.store.mutate((d) => {
             const lid = d.ui.listId;
             if (mode === 'replace') {
               d.events = d.events.filter((e) => e.listId !== lid);
               d.groups = d.groups.filter((g) => g.listId !== lid);
             }
-            const shift = mode === 'add'
-              ? (K.model.listEvents(d).concat(K.model.listGroups(d))
-                  .reduce((mx, x) => Math.max(mx, x.order || 0), 0) + 10)
-              : 0;
-            parsed.groups.forEach((g) => d.groups.push(Object.assign({}, g, { listId: lid, order: g.order + shift })));
-            parsed.events.forEach((e) => d.events.push(Object.assign({}, e, { listId: lid, order: e.order + shift })));
-          }, { action: 'içe aktarıldı', title: parsed.events.length + ' olay' });
+
+            let base = 0;
+            let holder = null;
+            if (mode === 'end' || mode === 'chrono') {
+              base = K.model.listEvents(d).concat(K.model.listGroups(d))
+                .reduce((mx, x) => Math.max(mx, x.order || 0), 0) + 10;
+            } else if (mode === 'after') {
+              const target = K.model.byId(d, anchor);
+              holder = target ? target.parentId : null;
+              const sib = K.model.childrenOf(d, holder);
+              const at = sib.findIndex((n) => n.ev && n.ev.id === anchor);
+              const next = at >= 0 && sib[at + 1] ? sib[at + 1].order : null;
+              const from = target ? target.order : 0;
+              // Kartla bir sonraki komşusu arasındaki boşluğa eşit aralıklarla sığdırıyoruz.
+              const gap = (next != null ? next - from : parsed.events.length + 1);
+              const step = gap / (parsed.events.length + 1);
+              parsed.events.forEach((e, i) => { e.order = from + step * (i + 1); });
+            }
+
+            const fresh = [];
+            parsed.groups.forEach((g) => d.groups.push(Object.assign({}, g, { listId: lid, order: g.order + base })));
+            parsed.events.forEach((e) => {
+              const copy = Object.assign({}, e, { listId: lid, order: (mode === 'after' ? e.order : e.order + base) });
+              if (mode === 'after' && !copy.parentId && !copy.groupId) copy.parentId = holder;
+              if (copy.isSpan) { copy.start = null; copy.end = null; copy.approx = false; copy.note = ''; copy.after = ''; }
+              d.events.push(copy);
+              fresh.push(copy);
+            });
+
+            if (mode === 'chrono') {
+              // Yılı olan her yeni kart kendi yerine, olmayan bir öncekinin ardına.
+              let prev = null;
+              fresh.forEach((e) => {
+                if (e.parentId || e.groupId) { prev = e; return; }
+                if (e.start) e.order = K.model.orderForDate(d, e);
+                else if (prev) e.order = prev.order + 0.001;
+                prev = e;
+              });
+            }
+          }, { action: 'içe aktarıldı', title: parsed.events.length + ' olay',
+               details: [{ k: 'Nasıl', from: '—', to: (MODES.find((m) => m.id === mode) || {}).ad }] });
 
           if (!ok) return;
           K.sheet.close();
@@ -325,8 +446,8 @@ K.panels = (function () {
       mk('Malazgirt Savaşı', { y: 1071, m: null, d: null },
         { note: 'Anadolu\'nun kapıları açıldı', after: 'Anadolu\'ya Türk göçü hızlandı' });
 
-      const kurtulus = mk('Kurtuluş Savaşı', { y: 1919, m: null, d: null },
-        { end: { y: 1922, m: null, d: null }, isSpan: true });
+      // Kapsamın tarihi yok; yılı önemliyse adına yazılır.
+      const kurtulus = mk('Kurtuluş Savaşı (1919-22)', null, { isSpan: true });
 
       const inSpan = { parentId: kurtulus.id };
       mk('Samsun\'a Çıkış', { y: 1919, m: 5, d: 19 }, inSpan);
@@ -356,5 +477,5 @@ K.panels = (function () {
     K.util.toast('Örnekler eklendi', 'Geri al', () => K.store.undo());
   }
 
-  return { welcome, profiles, lists, settings, samples, outline, importText };
+  return { welcome, profiles, lists, settings, samples, outline, importText, logPanel };
 })();
