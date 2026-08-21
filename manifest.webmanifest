@@ -1,0 +1,15 @@
+{
+  "name": "Kronolojim",
+  "short_name": "Kronolojim",
+  "description": "Tarih olaylarını kronolojik sırayla dizen ve tekrar ettiren çalışma uygulaması.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101219",
+  "theme_color": "#101219",
+  "lang": "tr",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

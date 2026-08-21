@@ -1,0 +1,14 @@
+{
+  "name": "kronolojim",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tarih olaylarını kronolojik sırayla dizen ve tekrar ettiren çalışma uygulaması.",
+  "scripts": {
+    "start": "node tools/serve.js . 8899",
+    "test": "node tools/smoke.js .",
+    "bundle": "node tools/bundle.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.1"
+  }
+}
