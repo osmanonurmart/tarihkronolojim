@@ -44,7 +44,9 @@ Uygulama kimseye şifre sormaz; arka planda anonim bir oturum açıp Firestore'a
 1. Sol üstteki **dişli → Proje ayarları**
 2. Aşağıda **Uygulamalarınız** → **`</>`** (web) simgesine bas
 3. Takma ad ver, **Uygulamayı kaydet**
-4. Ekranda çıkan bloğu **olduğu gibi kopyala**:
+4. Ekranda çıkan kod parçasını **olduğu gibi kopyala** — `import` satırları,
+   yorumlar, sondaki `initializeApp(...)` çağrısı dahil hepsini alabilirsin,
+   uygulama içinden ayarı kendi bulur:
 
 ```js
 const firebaseConfig = {

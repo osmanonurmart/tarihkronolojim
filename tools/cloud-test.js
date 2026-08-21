@@ -49,7 +49,28 @@ window.FAKE = {
       del: K.cloud._diff(after, before).filter(o => o.del).map(o => o.id),
       grouped: K.cloud._byProfile({ 'p1|e1|date': 1, 'p2|e1|order': 2 }),
       clean: K.cloud._clean({ a: undefined, b: { c: undefined }, d: [1, undefined] }),
-      cfg: K.cloud.parseConfig(`const firebaseConfig = { apiKey: 'AIza', projectId: "demo", appId: '1:2:web:3', };`)
+      cfg: K.cloud.parseConfig(`const firebaseConfig = { apiKey: 'AIza', projectId: "demo", appId: '1:2:web:3', };`),
+      // Konsoldan olduğu gibi kopyalanan tam parça: import satırları, yorumlar, sondaki çağrılar
+      whole: K.cloud.parseConfig([
+        '// Import the functions you need from the SDKs you need',
+        'import { initializeApp } from "firebase/app";',
+        'import { getAnalytics } from "firebase/analytics";',
+        '// TODO: Add SDKs for Firebase products that you want to use',
+        '',
+        'const firebaseConfig = {',
+        '  apiKey: "AIzaSyBxxx",',
+        '  authDomain: "demo-a8405.firebaseapp.com",',
+        '  projectId: "demo-a8405",',
+        '  storageBucket: "demo-a8405.firebasestorage.app",',
+        '  messagingSenderId: "1046716939644",',
+        '  appId: "1:1046716939644:web:20b707e2185267e4b9f8f9",',
+        '  measurementId: "G-W372NKJ3YL"',
+        '};',
+        '',
+        'const app = initializeApp(firebaseConfig);',
+        'const analytics = getAnalytics(app);'
+      ].join('\n')),
+      bad: (() => { try { K.cloud.parseConfig('merhaba'); return 'hata yok'; } catch (e) { return 'reddedildi'; } })()
     };
   });
   ok(pure.ops.length === 3, 'fark üç işlem üretti (değişen olay, yeni olay, ilerleme) — ' + pure.ops.length);
@@ -60,7 +81,10 @@ window.FAKE = {
   ok(pure.del.join(',') === 'e2,p1', 'silinenler için silme işlemi üretiliyor');
   ok(Object.keys(pure.grouped).join(',') === 'p1,p2', 'ilerleme profile göre gruplanıyor');
   ok(pure.clean.a === null && pure.clean.b.c === null && pure.clean.d[1] === null, 'undefined değerler null oluyor');
-  ok(pure.cfg.apiKey === 'AIza' && pure.cfg.projectId === 'demo', 'Firebase ayarı konsoldan yapıştırıldığı gibi okunuyor');
+  ok(pure.cfg.apiKey === 'AIza' && pure.cfg.projectId === 'demo', 'tek satırlık ayar okunuyor');
+  ok(pure.whole.projectId === 'demo-a8405' && pure.whole.appId.indexOf('1:104') === 0 && !pure.whole.initializeApp,
+     'konsoldan olduğu gibi yapıştırılan tam parça okunuyor (import satırları dahil)');
+  ok(pure.bad === 'reddedildi', 'alakasız metin düzgün reddediliyor');
 
   console.log('\n[2] Boş buluta ilk yükleme');
   await page.click('button:has-text("Onur")');

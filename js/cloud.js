@@ -43,15 +43,35 @@ K.cloud = (function () {
     else localStorage.removeItem(CFG_KEY);
   }
 
+  // Firebase konsolu bir JavaScript parçası verir — import satırları, yorumlar
+  // ve sonda getAnalytics çağrısıyla birlikte. Tamamı yapıştırılabilsin diye
+  // apiKey'i içeren nesneyi bulup parantezlerini sayarak kesiyoruz.
   function parseConfig(text) {
-    // Firebase konsolu bir JavaScript nesnesi verir; JSON'a çevirmemiz gerekiyor.
-    const m = String(text).match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('Ayar bulunamadı.');
-    let body = m[0]
-      .replace(/([{,]\s*)([A-Za-z0-9_]+)\s*:/g, '$1"$2":')
+    const src = String(text).replace(/\/\/[^\n]*/g, '');
+
+    const at = src.indexOf('apiKey');
+    if (at < 0) throw new Error('apiKey bulunamadı.');
+
+    let start = -1;
+    for (let i = at; i >= 0; i--) { if (src[i] === '{') { start = i; break; } }
+    if (start < 0) throw new Error('Ayar bloğu bulunamadı.');
+
+    let depth = 0, end = -1;
+    for (let i = start; i < src.length; i++) {
+      if (src[i] === '{') depth++;
+      else if (src[i] === '}' && --depth === 0) { end = i; break; }
+    }
+    if (end < 0) throw new Error('Ayar bloğu kapanmamış.');
+
+    const body = src.slice(start, end + 1)
+      .replace(/([{,]\s*)([A-Za-z0-9_$]+)\s*:/g, '$1"$2":')
       .replace(/'/g, '"')
       .replace(/,\s*([}\]])/g, '$1');
-    const obj = JSON.parse(body);
+
+    let obj;
+    try { obj = JSON.parse(body); }
+    catch (e) { throw new Error('Ayar okunamadı, blok eksik olabilir.'); }
+
     if (!obj.apiKey || !obj.projectId) throw new Error('apiKey ve projectId gerekiyor.');
     return obj;
   }
