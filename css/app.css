@@ -315,7 +315,8 @@ select { appearance:none; background-image:none; }
 .welcome { min-height:100%; display:flex; flex-direction:column; justify-content:center; gap:1.5rem; padding:2rem 1.25rem; max-width:26rem; margin:0 auto; }
 .welcome h1 {
   font-family:"Newsreader", Georgia, serif; font-weight:600;
-  font-size:2.4rem; margin:0; letter-spacing:-.02em; line-height:1.05;
+  font-size:clamp(1.9rem, 9vw, 2.4rem); margin:0; letter-spacing:-.02em;
+  line-height:1.05; text-wrap:balance;
 }
 .welcome p { color:var(--dim); margin:0; }
 

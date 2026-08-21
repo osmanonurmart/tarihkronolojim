@@ -1,6 +1,6 @@
 /* Çevrimdışı yedek. Önce ağdan alır, ancak internet yoksa kayıtlı kopyaya
    düşer — böylece yeni sürüm bir sonraki açılışı beklemeden gelir. */
-const CACHE = 'kronolojim-v5';
+const CACHE = 'kronolojim-v6';
 const ASSETS = [
   './', './index.html', './css/app.css', './icon.svg', './manifest.webmanifest',
   './js/util.js', './js/model.js', './js/textimport.js', './js/store.js', './js/firebase-config.js',

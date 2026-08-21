@@ -24,7 +24,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   };
 
   console.log('\n[1] Karşılama');
-  ok(await page.locator('.welcome h1').innerText() === 'Kronolojim', 'karşılama ekranı çıktı');
+  ok(await page.locator('.welcome h1').innerText() === 'Tarih Kronolojim', 'karşılama ekranı çıktı');
   await noOverflow('karşılama');
   await page.click('button:has-text("Onur")');
   await page.click('button:has-text("Örnekle başla")');

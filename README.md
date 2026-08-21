@@ -1,4 +1,4 @@
-# Kronolojim
+# Tarih Kronolojim
 
 Tarih olaylarını kendi girdiğin bir zaman çizelgesine dizen, sonra onları
 unutmadan önce sana geri soran çalışma uygulaması.

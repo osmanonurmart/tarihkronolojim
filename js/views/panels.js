@@ -8,7 +8,7 @@ K.panels = (function () {
   function welcome(db) {
     return '<div class="welcome">' +
       '<div>' +
-        '<h1>Kronolojim</h1>' +
+        '<h1>Tarih Kronolojim</h1>' +
         '<p>Kim çalışıyor?</p>' +
       '</div>' +
       '<div class="pick">' +
