@@ -21,46 +21,34 @@ K.timeline = (function () {
 
   const revealed = new Set();
 
-  function afterChip(db, ev) {
-    if (!ev.linkFrom || !ev.linkFrom.length) return '';
-    const names = ev.linkFrom
-      .map((id) => K.model.byId(db, id))
-      .filter(Boolean)
-      .map((e) => e.title);
-    if (!names.length) return '';
-    return '<div class="after-chip">↳ ' + esc(names.join(', ')) + ' ardından</div>';
+  function killBtn(db, id) {
+    return db.ui.editing
+      ? '<button class="kill-left" data-act="del-event" data-id="' + id + '" aria-label="Sil">🗑</button>'
+      : '';
   }
 
-  function eventCard(db, ev, opts) {
-    opts = opts || {};
+  function eventCard(db, ev) {
     const lv = K.srs.levelOf(db, ev.id);
-    const cls = ['ev', 'l' + lv];
-    if (opts.consequence) cls.push('consequence');
     const date = dateChip(db, ev);
-    const tags = (ev.tags && ev.tags.length)
-      ? '<div class="ev-tags">' + ev.tags.map((t) => '<span class="tag">' + esc(t) + '</span>').join('') + '</div>'
-      : '';
 
     return '' +
-      '<div class="' + cls.join(' ') + '" data-node="ev:' + ev.id + '" data-act="open-event" data-id="' + ev.id + '" role="button" tabindex="0">' +
-        (opts.consequence ? (afterChip(db, ev) || '<div class="after-chip">ardından</div>') : '') +
+      '<div class="ev l' + lv + '" data-node="ev:' + ev.id + '" data-act="open-event" data-id="' + ev.id + '" role="button" tabindex="0">' +
+        killBtn(db, ev.id) +
         '<div class="ev-top">' + date + ring(lv) + '</div>' +
         '<div class="ev-title">' + esc(ev.title) + '</div>' +
         (ev.note ? '<div class="ev-note">' + esc(ev.note) + '</div>' : '') +
-        (!opts.consequence ? afterChip(db, ev) : '') +
-        tags +
         (db.ui.editing ? '<button class="handle" data-handle aria-label="Taşı">⣿</button>' : '') +
       '</div>';
   }
 
-  function consequences(db, ev) {
-    const kids = K.model.attachedTo(db, ev.id);
-    if (!kids.length) return '';
-    return kids.map((c) =>
-      '<div class="link-row"><div class="link-elbow"></div>' +
-        eventCard(db, c, { consequence: true }) +
-      '</div>'
-    ).join('');
+  /* Sonuç metni kartın altında, içeri girintili küçük bir kutu olarak durur. */
+  function consequence(db, ev) {
+    if (!ev.after) return '';
+    return '<div class="link-row"><div class="link-elbow"></div>' +
+      '<div class="ev consequence" data-act="open-event" data-id="' + ev.id + '">' +
+        '<div class="after-chip">sonucunda</div>' +
+        '<div class="ev-title">' + esc(ev.after) + '</div>' +
+      '</div></div>';
   }
 
   function groupBox(db, g) {
@@ -68,6 +56,7 @@ K.timeline = (function () {
     const rows = evs.map((ev, i) => {
       const lv = K.srs.levelOf(db, ev.id);
       return '<div class="group-row l' + lv + '" data-node="ev:' + ev.id + '" data-act="open-event" data-id="' + ev.id + '" role="button" tabindex="0">' +
+        killBtn(db, ev.id) +
         '<span class="idx">' + (i + 1) + '</span>' +
         '<span>' + esc(ev.title) + '</span>' +
         ring(lv) +
@@ -82,9 +71,9 @@ K.timeline = (function () {
 
     return '<div class="group" data-node="gr:' + g.id + '">' +
       '<div class="group-head"><span>' + esc(g.name) + '</span>' +
+        '<button class="g-edit iconbtn" data-act="edit-group" data-id="' + g.id + '" aria-label="Grubu düzenle">✎</button>' +
         (db.ui.editing
-          ? '<button class="g-edit iconbtn" data-act="edit-group" data-id="' + g.id + '" aria-label="Grubu düzenle">✎</button>' +
-            '<button class="handle" data-handle aria-label="Taşı" style="position:static;transform:none">⣿</button>'
+          ? '<button class="handle" data-handle aria-label="Taşı" style="position:static;transform:none">⣿</button>'
           : '') +
       '</div>' + inner +
       (evs.length ? '' : '<div class="hint">Boş grup — düzenle modunda içine olay ekle.</div>') +
@@ -115,26 +104,28 @@ K.timeline = (function () {
       if (node.t === 'gr') { out.push(groupBox(db, node.gr)); continue; }
 
       const ev = node.ev;
-      if (K.model.isAttached(ev)) continue;
 
-      if (K.model.isSpan(db, ev) && depth < K.model.MAX_DEPTH) {
+      if (K.model.isSpan(ev) && depth < K.model.MAX_DEPTH) {
         const collapsed = db.ui.collapsed.indexOf(ev.id) >= 0;
         if (collapsed) {
           const count = K.model.flatten(db, ev.id).length;
           out.push(
-            '<div data-node="ev:' + ev.id + '">' +
+            '<div class="collapsed-row" data-node="ev:' + ev.id + '">' +
             '<button class="collapsed-span" data-act="toggle-span" data-id="' + ev.id + '">' +
               '<span class="cs-title">' + esc(ev.title) + '</span>' +
               '<span class="mono cs-meta">' + esc(K.model.fmtEvent(ev)) + ' · ' + count + ' olay</span>' +
-            '</button></div>'
+            '</button>' +
+            '<button class="iconbtn" data-act="open-event" data-id="' + ev.id + '" aria-label="Düzenle">✎</button>' +
+            '</div>'
           );
         } else {
           const label = esc(ev.title + ' ' + K.model.fmtEvent(ev));
           out.push(
             '<div class="span-row" data-node="ev:' + ev.id + '">' +
               '<div class="gutter">' +
+                '<button class="span-edit" data-act="open-event" data-id="' + ev.id + '" aria-label="Kapsamı düzenle">✎</button>' +
                 (db.ui.editing
-                  ? '<button class="iconbtn" data-act="open-event" data-id="' + ev.id + '" style="width:26px;height:24px" aria-label="Düzenle">✎</button>' +
+                  ? '<button class="span-edit kill" data-act="del-event" data-id="' + ev.id + '" aria-label="Kapsamı sil">🗑</button>' +
                     '<button class="handle" data-handle aria-label="Taşı" style="position:static;transform:none;height:24px">⣿</button>'
                   : '') +
                 '<button class="bracket d' + depth + '" data-act="toggle-span" data-id="' + ev.id + '" aria-label="Kapsamı katla">' +
@@ -145,12 +136,12 @@ K.timeline = (function () {
             '</div>'
           );
         }
-        out.push(consequences(db, ev));
+        out.push(consequence(db, ev));
         continue;
       }
 
       out.push(eventCard(db, ev));
-      out.push(consequences(db, ev));
+      out.push(consequence(db, ev));
     }
 
     const lastOrder = nodes.length ? nodes[nodes.length - 1].order + 1 : 1000;
@@ -223,11 +214,13 @@ K.timeline = (function () {
   }
 
   function setOrder(node, order) {
-    K.store.mutate((db) => {
-      const [t, id] = node.split(':');
-      const target = t === 'ev' ? db.events.find((e) => e.id === id) : db.groups.find((g) => g.id === id);
+    const [t, id] = node.split(':');
+    const db = K.store.get();
+    const item = t === 'ev' ? K.model.byId(db, id) : db.groups.find((g) => g.id === id);
+    K.store.mutate((d) => {
+      const target = t === 'ev' ? d.events.find((e) => e.id === id) : d.groups.find((g) => g.id === id);
       if (target) target.order = order;
-    });
+    }, { action: 'sırası değişti', title: item ? (item.title || item.name) : '' });
   }
 
   function onPointerDown(e) {

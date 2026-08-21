@@ -46,6 +46,19 @@ K.app = (function () {
     }),
 
     add: () => K.editor.open(null, {}),
+
+    'del-event': (el) => {
+      const db = K.store.get();
+      const ev = K.model.byId(db, el.dataset.id);
+      if (!ev) return;
+      const ok = K.store.mutate((d) => {
+        d.events = d.events.filter((e) => e.id !== ev.id);
+        d.events.forEach((e) => { if (e.parentId === ev.id) e.parentId = null; });
+        d.groups.forEach((g) => { if (g.parentId === ev.id) g.parentId = null; });
+      }, { action: 'silindi', title: ev.title });
+      if (ok) K.util.toast('Silindi', 'Geri al', () => K.store.undo());
+    },
+
     'open-event': (el) => K.editor.open(el.dataset.id),
     'edit-group': (el) => K.editor.openGroup(el.dataset.id),
 
@@ -72,7 +85,7 @@ K.app = (function () {
       K.store.mutate((d) => {
         d.profiles.push({ id: id, name: name.trim() });
         d.ui.profileId = id;
-      });
+      }, { action: 'kişi eklendi', title: name.trim() });
       K.sheet.close();
     },
 
@@ -81,21 +94,22 @@ K.app = (function () {
       const p = db.profiles.find((x) => x.id === el.dataset.id);
       const name = prompt('Yeni ad:', p ? p.name : '');
       if (!name || !name.trim()) return;
-      K.store.mutate((d) => { d.profiles.find((x) => x.id === el.dataset.id).name = name.trim(); });
+      K.store.mutate((d) => { d.profiles.find((x) => x.id === el.dataset.id).name = name.trim(); },
+        { action: 'kişi adı değişti', title: name.trim() });
       K.panels.profiles();
     },
 
     'del-profile': (el) => {
       const db = K.store.get();
       const p = db.profiles.find((x) => x.id === el.dataset.id);
-      if (!p || !K.util.confirmAsk(p.name + ' silinsin mi? Bu kişinin ilerlemesi de gider.')) return;
+      if (!p) return;
       K.store.mutate((d) => {
         d.profiles = d.profiles.filter((x) => x.id !== p.id);
         Object.keys(d.progress).forEach((k) => {
           if (k.indexOf(p.id + '|') === 0) delete d.progress[k];
         });
         if (d.ui.profileId === p.id) d.ui.profileId = d.profiles.length ? d.profiles[0].id : null;
-      });
+      }, { action: 'kişi silindi', title: p.name });
       K.panels.profiles();
       K.util.toast('Silindi', 'Geri al', () => K.store.undo());
     },
@@ -113,7 +127,7 @@ K.app = (function () {
         d.lists.push({ id: id, name: name.trim() });
         d.ui.listId = id;
         d.ui.collapsed = [];
-      });
+      }, { action: 'liste eklendi', title: name.trim() });
       K.sheet.close();
     },
 
@@ -122,21 +136,21 @@ K.app = (function () {
       const l = db.lists.find((x) => x.id === el.dataset.id);
       const name = prompt('Yeni ad:', l ? l.name : '');
       if (!name || !name.trim()) return;
-      K.store.mutate((d) => { d.lists.find((x) => x.id === el.dataset.id).name = name.trim(); });
+      K.store.mutate((d) => { d.lists.find((x) => x.id === el.dataset.id).name = name.trim(); },
+        { action: 'liste adı değişti', title: name.trim() });
       K.panels.lists();
     },
 
     'del-list': (el) => {
       const db = K.store.get();
       const l = db.lists.find((x) => x.id === el.dataset.id);
-      const n = db.events.filter((e) => e.listId === l.id).length;
-      if (!K.util.confirmAsk('"' + l.name + '" ve içindeki ' + n + ' olay silinsin mi?')) return;
+      if (!l) return;
       K.store.mutate((d) => {
         d.events = d.events.filter((e) => e.listId !== l.id);
         d.groups = d.groups.filter((g) => g.listId !== l.id);
         d.lists = d.lists.filter((x) => x.id !== l.id);
         if (d.ui.listId === l.id) d.ui.listId = d.lists.length ? d.lists[0].id : null;
-      });
+      }, { action: 'liste silindi', title: l.name });
       K.panels.lists();
       K.util.toast('Liste silindi', 'Geri al', () => K.store.undo());
     }
@@ -175,6 +189,8 @@ K.app = (function () {
     document.addEventListener('keydown', onKey);
     K.timeline.bind(root());
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    window.addEventListener('online', render);
+    window.addEventListener('offline', render);
     render();
 
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {

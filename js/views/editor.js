@@ -1,23 +1,47 @@
 window.K = window.K || {};
 
-/* Alt panel altyapısı */
+/* Alt panel altyapısı. Panel açıkken arkadaki liste kilitlenir — yoksa
+   panelin kaydırması sonuna gelince sayfaya devrediliyor. */
 K.sheet = (function () {
-  let onClose = null;
+  let lockedAt = 0;
+
+  function lock() {
+    lockedAt = window.scrollY || 0;
+    document.body.style.position = 'fixed';
+    document.body.style.top = -lockedAt + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  }
+
+  function unlock() {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, lockedAt);
+  }
 
   function close() {
     const host = document.getElementById('sheet-host');
+    if (!host.innerHTML) return;
     host.innerHTML = '';
-    if (onClose) { const f = onClose; onClose = null; f(); }
+    unlock();
   }
 
-  function open(html, bind, closed) {
+  function open(html, bind) {
     const host = document.getElementById('sheet-host');
-    onClose = closed || null;
-    host.innerHTML = '<div class="scrim" data-sheet-close></div><div class="sheet" role="dialog" aria-modal="true">' +
-      '<div class="sheet-grip"></div>' + html + '</div>';
-    host.querySelector('[data-sheet-close]').addEventListener('click', close);
-    const first = host.querySelector('input, textarea, select, button.primary');
-    if (first && first.tagName !== 'BUTTON') setTimeout(() => first.focus(), 60);
+    const wasOpen = !!host.innerHTML;
+    host.innerHTML =
+      '<div class="scrim" data-sheet-close></div>' +
+      '<div class="sheet" role="dialog" aria-modal="true">' +
+        '<button class="sheet-x" data-sheet-close aria-label="Kapat">✕</button>' +
+        '<div class="sheet-grip"></div>' + html +
+      '</div>';
+    if (!wasOpen) lock();
+    Array.prototype.forEach.call(host.querySelectorAll('[data-sheet-close]'),
+      (el) => el.addEventListener('click', close));
     if (bind) bind(host.querySelector('.sheet'));
   }
 
@@ -28,54 +52,32 @@ K.sheet = (function () {
 K.editor = (function () {
   const esc = K.util.esc;
 
-  function isDescendant(db, candidateId, ancestorId) {
-    let cur = K.model.byId(db, candidateId), guard = 0;
-    while (cur && guard++ < 20) {
-      if (cur.id === ancestorId) return true;
-      cur = cur.parentId ? K.model.byId(db, cur.parentId) : null;
-    }
-    return false;
+  function monthOptions(m) {
+    return '<option value="">Ay</option>' + K.model.MONTHS_LONG.map((n, i) =>
+      '<option value="' + (i + 1) + '"' + (m === i + 1 ? ' selected' : '') + '>' + n + '</option>').join('');
   }
 
-  function spanOptions(db, ev) {
-    return K.model.listEvents(db).filter((e) => {
-      if (!e.end) return false;
-      if (ev && (e.id === ev.id || isDescendant(db, e.id, ev.id))) return false;
-      return K.model.depthOf(db, e) < K.model.MAX_DEPTH;
-    });
-  }
-
-  function dateFields(prefix, dt, kind) {
-    const y = dt ? dt.y : '';
-    const m = dt && dt.m ? dt.m : '';
-    const d = dt && dt.d ? dt.d : '';
-    if (kind === 'none') return '';
-    if (kind === 'year') {
-      return '<input type="number" inputmode="numeric" id="' + prefix + 'y" placeholder="Yıl" value="' + esc(y) + '">';
-    }
-    return '<div class="row">' +
+  // Tarih hep gün / ay / yıl olarak sorulur; boş bırakılanlar yok sayılır.
+  function dateRow(prefix, dt) {
+    const y = dt ? dt.y : '', m = dt && dt.m ? dt.m : '', d = dt && dt.d ? dt.d : '';
+    return '<div class="row date-row">' +
       '<input type="number" inputmode="numeric" id="' + prefix + 'd" placeholder="Gün" value="' + esc(d) + '">' +
-      '<select id="' + prefix + 'm">' +
-        '<option value="">Ay</option>' +
-        K.model.MONTHS.map((n, i) =>
-          '<option value="' + (i + 1) + '"' + (m === i + 1 ? ' selected' : '') + '>' + n + '</option>').join('') +
-      '</select>' +
+      '<select id="' + prefix + 'm">' + monthOptions(m) + '</select>' +
       '<input type="number" inputmode="numeric" id="' + prefix + 'y" placeholder="Yıl" value="' + esc(y) + '">' +
     '</div>';
   }
 
-  function form(db, ev, preset) {
-    const isNew = !ev;
-    ev = ev || {
-      title: '', start: null, end: null, approx: false, note: '', tags: [],
-      parentId: preset.parent || null, groupId: preset.group || null, linkFrom: []
-    };
-    const kind = !ev.start ? 'none' : (ev.start.m ? 'full' : 'year');
-    const hasRange = !!ev.end;
+  function pickerOptions(items, selected, newLabel) {
+    return '<option value="">— yok —</option>' +
+      '<option value="__new">' + newLabel + '</option>' +
+      (items.length ? '<option disabled>──────────</option>' : '') +
+      items.map((x) => '<option value="' + x.id + '"' + (selected === x.id ? ' selected' : '') + '>' +
+        esc(x.title || x.name) + '</option>').join('');
+  }
 
-    const spans = spanOptions(db, isNew ? null : ev);
+  function form(db, ev, isNew) {
+    const spans = K.model.spanOptions(db, isNew ? null : ev);
     const groups = K.model.listGroups(db);
-    const others = K.model.listEvents(db).filter((e) => e.id !== ev.id);
 
     return '' +
     '<h2>' + (isNew ? 'Yeni olay' : 'Olayı düzenle') + '</h2>' +
@@ -87,19 +89,11 @@ K.editor = (function () {
 
     '<div class="field">' +
       '<label>Tarih</label>' +
-      '<div class="seg" id="f-kind">' +
-        '<button type="button" data-kind="none" class="' + (kind === 'none' ? 'on' : '') + '">Yok</button>' +
-        '<button type="button" data-kind="year" class="' + (kind === 'year' ? 'on' : '') + '">Yıl</button>' +
-        '<button type="button" data-kind="full" class="' + (kind === 'full' ? 'on' : '') + '">Tam tarih</button>' +
-      '</div>' +
-      '<div id="f-date">' + dateFields('f-s', ev.start, kind) + '</div>' +
-      '<div id="f-extra">' +
-        (kind === 'none' ? '' :
-          '<label class="check"><input type="checkbox" id="f-range" ' + (hasRange ? 'checked' : '') + '> Bir aralık (başlangıç–bitiş)</label>' +
-          '<div id="f-end">' + (hasRange ? dateFields('f-e', ev.end, kind) : '') + '</div>' +
-          '<label class="check"><input type="checkbox" id="f-approx" ' + (ev.approx ? 'checked' : '') + '> Yaklaşık tarih (~)</label>') +
-      '</div>' +
-      '<div class="hint">Tarihi yoksa sadece sırası önemli demektir — listede elle taşırsın.</div>' +
+      dateRow('f-s', ev.start) +
+      '<label class="check"><input type="checkbox" id="f-approx" ' + (ev.approx ? 'checked' : '') + '> Yaklaşık tarih (~)</label>' +
+      '<label class="check"><input type="checkbox" id="f-range" ' + (ev.end ? 'checked' : '') + '> Bir aralık (başlangıç–bitiş)</label>' +
+      '<div id="f-end">' + (ev.end ? dateRow('f-e', ev.end) : '') + '</div>' +
+      '<div class="hint">Boş bırakırsan tarihsiz olur — listede elle taşırsın.</div>' +
     '</div>' +
 
     '<div class="field">' +
@@ -108,197 +102,180 @@ K.editor = (function () {
     '</div>' +
 
     '<div class="field">' +
-      '<label for="f-tags">Etiketler</label>' +
-      '<input type="text" id="f-tags" value="' + esc((ev.tags || []).join(', ')) + '" placeholder="savaş, antlaşma" autocomplete="off">' +
+      '<label for="f-after">Sonucunda</label>' +
+      '<input type="text" id="f-after" value="' + esc(ev.after) + '" placeholder="İsmet Bey Dışişleri Bakanı oldu" autocomplete="off">' +
+      '<div class="hint">Kartın altında görünür, çalışırken de sorulur.</div>' +
     '</div>' +
 
     '<div class="row" style="margin-bottom:.85rem">' +
       '<div class="field" style="margin:0">' +
         '<label for="f-parent">Kapsam</label>' +
-        '<select id="f-parent">' +
-          '<option value="">— yok —</option>' +
-          spans.map((s) => '<option value="' + s.id + '"' + (ev.parentId === s.id ? ' selected' : '') + '>' + esc(s.title) + '</option>').join('') +
-        '</select>' +
+        '<select id="f-parent">' + pickerOptions(spans, ev.parentId, '+ Yeni kapsam…') + '</select>' +
+        '<div id="f-newspan"></div>' +
       '</div>' +
       '<div class="field" style="margin:0">' +
         '<label for="f-group">Grup</label>' +
-        '<select id="f-group">' +
-          '<option value="">— yok —</option>' +
-          groups.map((g) => '<option value="' + g.id + '"' + (ev.groupId === g.id ? ' selected' : '') + '>' + esc(g.name) + '</option>').join('') +
-          '<option value="__new">+ Yeni grup…</option>' +
-        '</select>' +
+        '<select id="f-group">' + pickerOptions(groups, ev.groupId, '+ Yeni grup…') + '</select>' +
+        '<div id="f-newgroup"></div>' +
       '</div>' +
     '</div>' +
 
-    '<div class="field">' +
-      '<label>Şu olayların ardından</label>' +
-      '<input type="text" id="f-linkq" placeholder="Ara…" autocomplete="off">' +
-      '<div id="f-links" style="max-height:9rem;overflow-y:auto;display:flex;flex-direction:column;gap:.15rem">' +
-        others.map((o) =>
-          '<label class="check" data-title="' + esc(o.title.toLocaleLowerCase('tr')) + '">' +
-            '<input type="checkbox" value="' + o.id + '" ' + ((ev.linkFrom || []).indexOf(o.id) >= 0 ? 'checked' : '') + '> ' +
-            esc(o.title) + '</label>').join('') +
-      '</div>' +
-      (others.length ? '' : '<div class="hint">Henüz başka olay yok.</div>') +
-    '</div>' +
-
-    (isNew ? '' :
-      '<button class="btn small" id="f-replace" type="button">Tarihe göre yerine koy</button>') +
+    (isNew || !K.model.isSpan(ev) ? '' :
+      '<div class="hint" style="margin-bottom:.6rem">Bu olay bir kapsam — listede soldaki parantez olarak görünüyor.</div>') +
 
     '<div class="sheet-actions">' +
       (isNew ? '' : '<button class="btn danger" id="f-del" type="button">Sil</button>') +
-      '<button class="btn grow" data-sheet-cancel type="button">Vazgeç</button>' +
       '<button class="btn primary grow" id="f-save" type="button">Kaydet</button>' +
     '</div>';
   }
 
   function open(evId, preset) {
     const db = K.store.get();
-    const ev = evId ? K.model.byId(db, evId) : null;
+    const existing = evId ? K.model.byId(db, evId) : null;
+    const isNew = !existing;
     preset = preset || {};
-    let kind = !ev ? 'none' : (!ev.start ? 'none' : (ev.start.m ? 'full' : 'year'));
 
-    K.sheet.open(form(db, ev, preset), function (root) {
+    const ev = existing || Object.assign(K.model.blank(db.ui.listId), {
+      parentId: preset.parent || null,
+      groupId: preset.group || null
+    });
+
+    K.sheet.open(form(db, ev, isNew), function (root) {
       const $ = (sel) => root.querySelector(sel);
 
-      function redrawDates() {
-        $('#f-date').innerHTML = dateFields('f-s', readDate('f-s'), kind);
-        const rangeOn = $('#f-range') && $('#f-range').checked;
-        const prevEnd = readDate('f-e');
-        $('#f-extra').innerHTML = kind === 'none' ? '' :
-          '<label class="check"><input type="checkbox" id="f-range" ' + (rangeOn ? 'checked' : '') + '> Bir aralık (başlangıç–bitiş)</label>' +
-          '<div id="f-end">' + (rangeOn ? dateFields('f-e', prevEnd, kind) : '') + '</div>' +
-          '<label class="check"><input type="checkbox" id="f-approx" ' + (approx ? 'checked' : '') + '> Yaklaşık tarih (~)</label>';
-      }
-
-      let approx = ev ? !!ev.approx : false;
-
       function readDate(prefix) {
-        const y = $('#' + prefix + 'y'), m = $('#' + prefix + 'm'), d = $('#' + prefix + 'd');
+        const y = $('#' + prefix + 'y');
         if (!y) return null;
+        const m = $('#' + prefix + 'm'), d = $('#' + prefix + 'd');
         return K.model.parseDate(y.value, m ? m.value : null, d ? d.value : null);
       }
 
-      $('#f-kind').addEventListener('click', (e) => {
-        const b = e.target.closest('[data-kind]');
-        if (!b) return;
-        kind = b.getAttribute('data-kind');
-        Array.from($('#f-kind').children).forEach((c) => c.classList.toggle('on', c === b));
-        redrawDates();
+      $('#f-range').addEventListener('change', (e) => {
+        $('#f-end').innerHTML = e.target.checked ? dateRow('f-e', null) : '';
       });
 
-      root.addEventListener('change', (e) => {
-        if (e.target.id === 'f-range') {
-          $('#f-end').innerHTML = e.target.checked ? dateFields('f-e', null, kind) : '';
-        }
-        if (e.target.id === 'f-approx') approx = e.target.checked;
-        if (e.target.id === 'f-group' && e.target.value === '__new') {
-          const name = prompt('Yeni grubun adı:');
-          if (name && name.trim()) {
-            const gid = K.util.uid();
-            K.store.mutate((d) => {
-              d.groups.push({
-                id: gid, listId: d.ui.listId, name: name.trim(),
-                parentId: $('#f-parent').value || null,
-                order: (K.model.childrenOf(d, $('#f-parent').value || null).slice(-1)[0] || { order: 999 }).order + 1
-              });
-            });
-            const sel = $('#f-group');
+      /* Yeni kapsam / grup, panelden çıkmadan burada oluşturuluyor —
+         yarım kalan form kaybolmasın diye ayrı bir ekran açmıyoruz. */
+      function inlineCreate(selectId, boxId, fields, onCreate) {
+        const sel = $('#' + selectId), box = $('#' + boxId);
+        sel.addEventListener('change', () => {
+          if (sel.value !== '__new') { box.innerHTML = ''; return; }
+          box.innerHTML = '<div class="inline-new">' + fields +
+            '<button class="btn small primary" type="button" data-create>Oluştur</button></div>';
+          const first = box.querySelector('input');
+          if (first) first.focus();
+          box.querySelector('[data-create]').addEventListener('click', () => {
+            const made = onCreate(box);
+            if (!made) return;
             const opt = document.createElement('option');
-            opt.value = gid; opt.textContent = name.trim();
-            sel.insertBefore(opt, sel.lastElementChild);
-            sel.value = gid;
-          } else {
-            e.target.value = '';
-          }
-        }
-      });
-
-      const q = $('#f-linkq');
-      if (q) q.addEventListener('input', () => {
-        const needle = q.value.toLocaleLowerCase('tr');
-        Array.from($('#f-links').children).forEach((lab) => {
-          lab.style.display = lab.getAttribute('data-title').indexOf(needle) >= 0 ? '' : 'none';
+            opt.value = made.id;
+            opt.textContent = made.title || made.name;
+            sel.appendChild(opt);
+            sel.value = made.id;
+            box.innerHTML = '';
+          });
         });
-      });
+      }
 
-      root.querySelector('[data-sheet-cancel]').addEventListener('click', K.sheet.close);
+      inlineCreate('f-parent', 'f-newspan',
+        '<input type="text" data-name placeholder="Kapsam adı" autocomplete="off">' +
+        '<div class="row"><input type="number" inputmode="numeric" data-from placeholder="Başlangıç yılı">' +
+        '<input type="number" inputmode="numeric" data-to placeholder="Bitiş yılı"></div>',
+        (box) => {
+          const name = box.querySelector('[data-name]').value.trim();
+          const from = parseInt(box.querySelector('[data-from]').value, 10);
+          const to = parseInt(box.querySelector('[data-to]').value, 10);
+          if (!name) { K.util.toast('Kapsam adı gerekli.'); return null; }
+          if (!from) { K.util.toast('Başlangıç yılı gerekli.'); return null; }
+          if (to && to < from) { K.util.toast('Bitiş, başlangıçtan önce olamaz.'); return null; }
+
+          const span = Object.assign(K.model.blank(db.ui.listId), {
+            title: name,
+            start: { y: from, m: null, d: null },
+            end: to ? { y: to, m: null, d: null } : null,
+            isSpan: true
+          });
+          const ok = K.store.mutate((d) => {
+            span.order = K.model.orderForDate(d, span);
+            d.events.push(span);
+          }, { action: 'kapsam eklendi', title: name });
+          return ok ? span : null;
+        });
+
+      inlineCreate('f-group', 'f-newgroup',
+        '<input type="text" data-name placeholder="Grup adı" autocomplete="off">',
+        (box) => {
+          const name = box.querySelector('[data-name]').value.trim();
+          if (!name) { K.util.toast('Grup adı gerekli.'); return null; }
+          const group = {
+            id: K.util.uid(), listId: db.ui.listId, name: name,
+            parentId: $('#f-parent').value && $('#f-parent').value !== '__new' ? $('#f-parent').value : null,
+            order: 0
+          };
+          const ok = K.store.mutate((d) => {
+            const siblings = K.model.childrenOf(d, group.parentId);
+            group.order = siblings.length ? siblings[siblings.length - 1].order + 1 : 1000;
+            d.groups.push(group);
+          }, { action: 'grup eklendi', title: name });
+          return ok ? group : null;
+        });
 
       if ($('#f-del')) $('#f-del').addEventListener('click', () => {
-        if (!K.util.confirmAsk('"' + ev.title + '" silinsin mi?')) return;
-        K.store.mutate((d) => {
-          d.events = d.events.filter((e) => e.id !== ev.id);
-          d.events.forEach((e) => {
-            if (e.parentId === ev.id) e.parentId = null;
-            if (e.linkFrom) e.linkFrom = e.linkFrom.filter((x) => x !== ev.id);
-          });
-          d.groups.forEach((g) => { if (g.parentId === ev.id) g.parentId = null; });
-        });
+        const title = existing.title;
+        const ok = K.store.mutate((d) => {
+          d.events = d.events.filter((e) => e.id !== existing.id);
+          d.events.forEach((e) => { if (e.parentId === existing.id) e.parentId = null; });
+          d.groups.forEach((g) => { if (g.parentId === existing.id) g.parentId = null; });
+        }, { action: 'silindi', title: title });
+        if (!ok) return;
         K.sheet.close();
         K.util.toast('Silindi', 'Geri al', () => K.store.undo());
-      });
-
-      if ($('#f-replace')) $('#f-replace').addEventListener('click', () => {
-        K.store.mutate((d) => {
-          const t = K.model.byId(d, ev.id);
-          if (t) t.order = K.model.orderForDate(d, t);
-        });
-        K.util.toast('Tarihine göre yerleştirildi', 'Geri al', () => K.store.undo());
       });
 
       $('#f-save').addEventListener('click', () => {
         const title = $('#f-title').value.trim();
         if (!title) { $('#f-title').focus(); K.util.toast('Başlık gerekli.'); return; }
 
-        const start = kind === 'none' ? null : readDate('f-s');
-        if (kind !== 'none' && !start) { K.util.toast('Yıl gerekli.'); return; }
-        const rangeOn = $('#f-range') && $('#f-range').checked;
-        let end = rangeOn ? readDate('f-e') : null;
-        if (end && start && K.model.key(end) < K.model.key(start)) {
+        const start = readDate('f-s');
+        const end = ($('#f-range').checked && start) ? readDate('f-e') : null;
+        if (end && K.model.key(end) < K.model.key(start)) {
           K.util.toast('Bitiş, başlangıçtan önce olamaz.'); return;
         }
 
-        const tags = $('#f-tags').value.split(',').map((s) => s.trim()).filter(Boolean);
-        const note = $('#f-note').value.trim();
-        const groupId = $('#f-group').value && $('#f-group').value !== '__new' ? $('#f-group').value : null;
-        const parentId = groupId ? null : ($('#f-parent').value || null);
-        const linkFrom = Array.from($('#f-links').querySelectorAll('input:checked')).map((i) => i.value);
+        const groupId = pick($('#f-group'));
+        const parentId = groupId ? null : pick($('#f-parent'));
+        const fields = {
+          title: title, start: start, end: end,
+          approx: $('#f-approx').checked && !!start,
+          note: $('#f-note').value.trim(),
+          after: $('#f-after').value.trim(),
+          groupId: groupId, parentId: parentId
+        };
 
-        K.store.mutate((d) => {
-          if (ev) {
-            const t = K.model.byId(d, ev.id);
-            Object.assign(t, {
-              title: title, start: start, end: end, approx: approx && !!start,
-              note: note, tags: tags, groupId: groupId, parentId: parentId, linkFrom: linkFrom
-            });
-          } else {
-            const fresh = {
-              id: K.util.uid(), listId: d.ui.listId, title: title,
-              start: start, end: end, approx: approx && !!start,
-              note: note, tags: tags,
-              parentId: parentId || (preset.parent || null),
-              groupId: groupId, linkFrom: linkFrom, order: 0
-            };
-            if (!fresh.parentId && !fresh.groupId && start) {
-              fresh.parentId = K.model.suggestParent(d, start, fresh.id);
-            }
-            if (preset.order != null && preset.group === (groupId || undefined)) {
-              fresh.order = preset.order;
-            } else if (groupId) {
-              const last = K.model.eventsOfGroup(d, groupId).slice(-1)[0];
-              fresh.order = last ? last.order + 1 : 1000;
-            } else if (preset.order != null) {
-              fresh.order = preset.order;
-            } else {
-              d.events.push(fresh);
-              fresh.order = K.model.orderForDate(d, fresh);
-              d.events.pop();
-            }
-            d.events.push(fresh);
+        const ok = K.store.mutate((d) => {
+          if (existing) {
+            Object.assign(K.model.byId(d, existing.id), fields);
+            return;
           }
-        });
-        K.sheet.close();
+          const fresh = Object.assign(K.model.blank(d.ui.listId), fields);
+          if (preset.order != null) fresh.order = preset.order;
+          else if (groupId) {
+            const last = K.model.eventsOfGroup(d, groupId).slice(-1)[0];
+            fresh.order = last ? last.order + 1 : 1000;
+          } else {
+            d.events.push(fresh);
+            fresh.order = K.model.orderForDate(d, fresh);
+            d.events.pop();
+          }
+          d.events.push(fresh);
+        }, { action: existing ? 'değiştirildi' : 'eklendi', title: title });
+
+        if (ok) K.sheet.close();
       });
+
+      function pick(sel) {
+        return sel.value && sel.value !== '__new' ? sel.value : null;
+      }
     });
   }
 
@@ -313,27 +290,24 @@ K.editor = (function () {
       '<div class="hint">Grup içinde tarih değil, sadece sıra önemlidir.</div>' +
       '<div class="sheet-actions">' +
         '<button class="btn danger" id="g-del" type="button">Sil</button>' +
-        '<button class="btn grow" data-sheet-cancel type="button">Vazgeç</button>' +
         '<button class="btn primary grow" id="g-save" type="button">Kaydet</button>' +
       '</div>',
       function (root) {
-        root.querySelector('[data-sheet-cancel]').addEventListener('click', K.sheet.close);
         root.querySelector('#g-save').addEventListener('click', () => {
           const name = root.querySelector('#g-name').value.trim();
           if (!name) return;
-          K.store.mutate((d) => { d.groups.find((x) => x.id === gid).name = name; });
-          K.sheet.close();
+          if (K.store.mutate((d) => { d.groups.find((x) => x.id === gid).name = name; },
+                             { action: 'grup değiştirildi', title: name })) K.sheet.close();
         });
         root.querySelector('#g-del').addEventListener('click', () => {
-          const n = K.model.eventsOfGroup(db, gid).length;
-          if (!K.util.confirmAsk('Grup silinsin mi? İçindeki ' + n + ' olay listede kalır.')) return;
-          K.store.mutate((d) => {
+          const ok = K.store.mutate((d) => {
             const grp = d.groups.find((x) => x.id === gid);
             d.events.forEach((e) => {
               if (e.groupId === gid) { e.groupId = null; e.parentId = grp ? grp.parentId : null; }
             });
             d.groups = d.groups.filter((x) => x.id !== gid);
-          });
+          }, { action: 'grup silindi', title: g.name });
+          if (!ok) return;
           K.sheet.close();
           K.util.toast('Grup silindi', 'Geri al', () => K.store.undo());
         });

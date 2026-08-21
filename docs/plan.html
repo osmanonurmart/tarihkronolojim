@@ -516,7 +516,7 @@
           <tr><td><strong>Aralık</strong></td><td>Başlangıç–bitiş verilebilir. <span class="num">1919–1922</span></td></tr>
           <tr><td><strong>Yaklaşık</strong></td><td>Kesin değilse <code>~</code> işaretiyle gösterilir</td></tr>
           <tr><td><strong>Not</strong></td><td>Kartın içinde serbest açıklama. Sorulmaz.</td></tr>
-          <tr><td><strong>Etiketler</strong></td><td>Filtreleme için. “savaş”, “antlaşma”, “kongre”</td></tr>
+          <tr><td><strong>Sonucunda</strong></td><td>Kartın altında ayrı kutuda görünür, çalışırken sorulur</td></tr>
         </tbody>
       </table>
     </div>
@@ -525,9 +525,9 @@
 
   <section>
     <h2>Kapsam</h2>
-    <p class="lede">Tarih aralığı olan bir olay, kendi aralığına düşen başka olayları içeriyorsa kart olarak değil, <strong>solda yuvarlak uçlu köşeli parantez</strong> olarak çizilir. Yazısı dikey durur ve kaydırdıkça görüş alanında kalır.</p>
+    <p class="lede">Bir olay <strong>solda yuvarlak uçlu köşeli parantez</strong> olarak çizilebilir. Yazısı dikey durur ve kaydırdıkça görüş alanında kalır.</p>
     <ul>
-      <li>Ayrı bir tür değil — sadece aralığı olan bir olay. İçi boşsa normal kart olur.</li>
+      <li>Kendiliğinden olmaz: kapsamlar olay eklerken açılan kutudan oluşturulur, bir kart ancak sen seçersen içine girer.</li>
       <li>Parantez kendisi de bir olay olduğu için çalışmada sorulabilir: <em>“Kurtuluş Savaşı ne zaman başladı?”</em></li>
       <li>Parantez katlanabilir: 50 olay tek satıra iner — <code>Kurtuluş Savaşı 1919–1922 · 50 olay</code></li>
       <li>İç içe en fazla <strong>3 seviye</strong>. Daha derini telefonda ekranı yer.</li>
@@ -540,13 +540,11 @@
   </section>
 
   <section>
-    <h2>Bağ</h2>
-    <p class="lede">Bir olayın ardından ne olduğunu anlatır. Bir veya birkaç olaydan çıkıp tek bir olaya gider — I. ve II. İnönü'nün <em>ikisinin birden</em> ardından İsmet Bey'in Dışişleri'ne geçmesi gibi.</p>
+    <h2>Sonucunda</h2>
+    <p class="lede">Her olayın bir <strong>Sonucunda</strong> kutusu var. Ne yazarsan kartın hemen altında, içeri girintili küçük bir kutuda görünür.</p>
     <ul>
-      <li>Bağın ucundaki kutu <strong>gerçek bir olaydır</strong>: tarihi olabilir. Tarih girilirse listede kendi yerine oturur, yine de okla kaynağına bağlı kalır.</li>
-      <li>Tarih girilmezse kaynağının hemen altında durur.</li>
-      <li>Tek çeşit ok: <em>“ardından”</em>. Sebep/ilgili gibi çeşitler sonra eklenebilir.</li>
-      <li>Bağın kendisi soru üretir: <em>“İsmet Bey'in Dışişleri'ne geçmesi hangi olayların ardından oldu?”</em></li>
+      <li>Ayrı bir olay değil, kartın bir alanı — tarihi yok, listede kendi yeri yok.</li>
+      <li>Çalışmada soru olur: <em>“II. İnönü Savaşı sonucunda ne oldu?”</em> Yanlış şıklar başka kartların sonuç metinlerinden gelir.</li>
     </ul>
   </section>
 
@@ -613,7 +611,7 @@
           <tr><td><strong>Tarih sorma</strong></td><td>“Cumhuriyet ne zaman ilan edildi?” — sadece tarihi olan olaylarda.</td></tr>
           <tr><td><strong>Sıraya dizme</strong></td><td>4–5 kart karışık gelir, doğru sıraya sürüklenir.</td></tr>
           <tr><td><strong>Tarih gizleme</strong></td><td>Normal kronoloji ekranı, tarihler kapalı. Dokununca açılır.</td></tr>
-          <tr><td><strong>Bağ sorusu</strong></td><td>“Bu olayların ardından ne oldu?” — oklardan üretilir.</td></tr>
+          <tr><td><strong>Sonucunda</strong></td><td>“II. İnönü Savaşı sonucunda ne oldu?” — kartların sonuç metinlerinden üretilir.</td></tr>
         </tbody>
       </table>
     </div>
@@ -627,7 +625,8 @@
       <h3>Kabaca düzen</h3>
       <ul>
         <li><code>listeler</code> — “İnkılap Tarihi”, “Osmanlı Kuruluş”</li>
-        <li><code>olaylar</code> — başlık, tarih, aralık, ~, not, sıra, kapsam, grup, bağ, etiketler</li>
+        <li><code>olaylar</code> — başlık, tarih, aralık, ~, not, sonuç, sıra, kapsam, grup</li>
+        <li><code>kayıt</code> — son değişiklikler: kim, ne zaman, ne yaptı</li>
         <li><code>profiller</code> — Onur, Fatma, sonradan eklenenler</li>
         <li><code>ilerleme</code> — (profil × olay) başına: seviye, sonraki tarih, doğru/yanlış sayısı</li>
       </ul>
@@ -693,7 +692,7 @@
         <div class="phase-num">6</div>
         <div class="phase-body">
           <h3>Kolaylıklar</h3>
-          <p>Arama, filtre, etiketler, hazır tarih paketleri.</p>
+          <p>Arama, filtre, hazır tarih paketleri.</p>
         </div>
       </div>
     </div>
@@ -704,9 +703,8 @@
     <div class="open">
       <p class="lede">Şimdilik varsayımla ilerliyorum, istediğin zaman değiştirilir:</p>
       <ul>
-        <li>Aralık yazımı <code>1919–1922</code> biçiminde. <code>1919-22</code> da olabilir.</li>
-        <li>Tarih gizleme modu puanlamaya girmiyor, sadece bakma modu.</li>
         <li>Hazır tarih paketlerinin içeriği (hangi dönemler, kaç olay).</li>
+        <li>Sıraya dizme oyunu ve arama/filtre henüz yazılmadı.</li>
       </ul>
     </div>
   </section>

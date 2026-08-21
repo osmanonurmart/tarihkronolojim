@@ -98,6 +98,8 @@ K.panels = (function () {
 
       cloudSection() +
 
+      logSection() +
+
       '<div class="field">' +
         '<label>Tehlikeli</label>' +
         '<button class="btn danger" id="s-reset" type="button">Her şeyi sil</button>' +
@@ -190,24 +192,25 @@ K.panels = (function () {
     });
   }
 
-  /* Hem bulutta hem bu cihazda veri varsa hangisinin kalacağını sorar. */
-  function cloudMerge(choose) {
+  /* ---- Kayıt defteri ---- */
+  function logSection() {
     const db = K.store.get();
-    K.sheet.open(
-      '<h2>İki tarafta da veri var</h2>' +
-      '<p class="hint" style="margin-bottom:.9rem">Bulutta zaten kayıtlı olaylar var, bu cihazda da ' +
-        db.events.length + ' olay duruyor. Hangisi kalsın? Seçilmeyen taraf silinir.</p>' +
-      '<div class="pick">' +
-        '<button class="pick-row" id="m-cloud"><span class="avatar">☁</span>' +
-          '<span>Buluttakiler kalsın</span></button>' +
-        '<button class="pick-row" id="m-local"><span class="avatar">▣</span>' +
-          '<span>Bu cihazdakiler kalsın</span></button>' +
-      '</div>',
-      function (root) {
-        root.querySelector('#m-cloud').addEventListener('click', () => { K.sheet.close(); choose('cloud'); });
-        root.querySelector('#m-local').addEventListener('click', () => { K.sheet.close(); choose('local'); });
-      }
-    );
+    const rows = (db.log || []).slice(0, 20).map((e) => {
+      const t = new Date(e.ts);
+      const when = t.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' }) +
+        ' ' + t.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+      return '<div class="log-row">' +
+        '<span class="log-when mono">' + esc(when) + '</span>' +
+        '<span class="log-who">' + esc(e.by) + '</span>' +
+        '<span class="log-what">' + esc(e.title ? '"' + e.title + '" ' + e.action : e.action) + '</span>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="field"><label>Son değişiklikler</label>' +
+      (rows ? '<div class="log">' + rows + '</div>'
+            : '<div class="hint">Henüz bir değişiklik yok.</div>') +
+      '<div class="hint">Günlük tekrarlar buraya yazılmaz — sadece kart ekleme, değiştirme ve silme.</div>' +
+    '</div>';
   }
 
   /* ---- Aktarım ---- */
@@ -235,15 +238,12 @@ K.panels = (function () {
           return;
         }
         const ev = node.ev;
-        if (K.model.isAttached(ev)) return;
         const date = K.model.fmtEvent(ev);
-        const span = K.model.isSpan(db, ev) ? '  (kapsam — altındakiler bu aralığın içinde)' : '';
+        const span = K.model.isSpan(ev) ? '  (kapsam — altındakiler bu aralığın içinde)' : '';
         lines.push(pad + '- ' + (date ? date + ' — ' : '(tarihsiz) ') + ev.title +
                    (ev.note ? ' — ' + ev.note : '') + span);
-        K.model.attachedTo(db, ev.id).forEach((c) => {
-          lines.push(pad + '  ↳ ardından: ' + c.title);
-        });
-        if (K.model.isSpan(db, ev)) walk(ev.id, depth + 1);
+        if (ev.after) lines.push(pad + '  ↳ sonucunda: ' + ev.after);
+        if (K.model.isSpan(ev)) walk(ev.id, depth + 1);
       });
     }
     walk(null, 0);
@@ -281,7 +281,6 @@ K.panels = (function () {
         if (!data || !Array.isArray(data.events) || !Array.isArray(data.lists)) {
           throw new Error('biçim');
         }
-        if (!K.util.confirmAsk('Şu anki veriler bu yedekle değiştirilecek. Devam edilsin mi?')) return;
         K.store.replaceAll(data);
         K.sheet.close();
         K.util.toast('Yedek yüklendi', 'Geri al', () => K.store.undo());
@@ -297,51 +296,46 @@ K.panels = (function () {
     K.store.mutate((db) => {
       const lid = db.ui.listId;
       let o = 1000;
-      const mk = (title, start, end, extra) => {
-        const ev = Object.assign({
-          id: K.util.uid(), listId: lid, title: title, start: start, end: end,
-          approx: false, note: '', tags: [], parentId: null, groupId: null,
-          linkFrom: [], order: o
-        }, extra || {});
+      const mk = (title, start, extra) => {
+        const ev = Object.assign(K.model.blank(lid), { title: title, start: start, order: o }, extra || {});
         o += 10;
         db.events.push(ev);
         return ev;
       };
 
-      mk('Malazgirt Savaşı', { y: 1071, m: null, d: null }, null,
-        { note: 'Anadolu\'nun kapıları açıldı', tags: ['savaş'] });
+      mk('Malazgirt Savaşı', { y: 1071, m: null, d: null },
+        { note: 'Anadolu\'nun kapıları açıldı', after: 'Anadolu\'ya Türk göçü hızlandı' });
 
-      const kurtulus = mk('Kurtuluş Savaşı', { y: 1919, m: null, d: null }, { y: 1922, m: null, d: null });
+      const kurtulus = mk('Kurtuluş Savaşı', { y: 1919, m: null, d: null },
+        { end: { y: 1922, m: null, d: null }, isSpan: true });
 
       const inSpan = { parentId: kurtulus.id };
-      mk('Samsun\'a Çıkış', { y: 1919, m: 5, d: 19 }, null, inSpan);
-      mk('Erzurum Kongresi', { y: 1919, m: 7, d: 23 }, null,
+      mk('Samsun\'a Çıkış', { y: 1919, m: 5, d: 19 }, inSpan);
+      mk('Erzurum Kongresi', { y: 1919, m: 7, d: 23 },
         Object.assign({ note: 'Bölgesel değil, ulusal karar' }, inSpan));
-      mk('Sivas Kongresi', { y: 1919, m: 9, d: 4 }, null, inSpan);
+      mk('Sivas Kongresi', { y: 1919, m: 9, d: 4 }, inSpan);
 
       const g = { id: K.util.uid(), listId: lid, name: 'Cepheler', parentId: kurtulus.id, order: o };
       o += 10;
       db.groups.push(g);
       let go = 1000;
       ['Doğu Cephesi', 'Güney Cephesi', 'Batı Cephesi'].forEach((n) => {
-        db.events.push({
-          id: K.util.uid(), listId: lid, title: n, start: null, end: null, approx: false,
-          note: '', tags: [], parentId: null, groupId: g.id, linkFrom: [], order: go
-        });
+        db.events.push(Object.assign(K.model.blank(lid), { title: n, groupId: g.id, order: go }));
         go += 10;
       });
 
-      const i1 = mk('I. İnönü Savaşı', { y: 1921, m: 1, d: 6 }, { y: 1921, m: 1, d: 10 }, inSpan);
-      const i2 = mk('II. İnönü Savaşı', { y: 1921, m: 3, d: 23 }, { y: 1921, m: 3, d: 31 }, inSpan);
-      mk('İsmet Bey Dışişleri\'ne geçti', null, null,
-        Object.assign({ linkFrom: [i1.id, i2.id] }, inSpan));
+      mk('I. İnönü Savaşı', { y: 1921, m: 1, d: 6 },
+        Object.assign({ end: { y: 1921, m: 1, d: 10 }, after: 'Londra Konferansı toplandı' }, inSpan));
+      mk('II. İnönü Savaşı', { y: 1921, m: 3, d: 23 },
+        Object.assign({ end: { y: 1921, m: 3, d: 31 }, after: 'İsmet Bey Dışişleri Bakanı oldu' }, inSpan));
+      mk('Sakarya Meydan Muharebesi', { y: 1921, m: 8, d: 23 },
+        Object.assign({ end: { y: 1921, m: 9, d: 13 }, after: 'Mustafa Kemal\'e Gazi unvanı verildi' }, inSpan));
 
-      mk('Sakarya Meydan Muharebesi', { y: 1921, m: 8, d: 23 }, { y: 1921, m: 9, d: 13 }, inSpan);
-      mk('Lozan Antlaşması', { y: 1923, m: 7, d: 24 }, null, { tags: ['antlaşma'] });
-      mk('Cumhuriyet\'in İlanı', { y: 1923, m: 10, d: 29 }, null, { tags: ['inkılap'] });
-    });
+      mk('Lozan Antlaşması', { y: 1923, m: 7, d: 24 }, { after: 'Yeni devlet uluslararası olarak tanındı' });
+      mk('Cumhuriyet\'in İlanı', { y: 1923, m: 10, d: 29 }, { after: 'Mustafa Kemal ilk cumhurbaşkanı oldu' });
+    }, { action: 'örnekler eklendi' });
     K.util.toast('Örnekler eklendi', 'Geri al', () => K.store.undo());
   }
 
-  return { welcome, profiles, lists, settings, samples, outline, cloudMerge };
+  return { welcome, profiles, lists, settings, samples, outline };
 })();

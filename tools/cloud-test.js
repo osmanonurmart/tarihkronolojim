@@ -8,7 +8,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
 
 const FAKE = `
 window.FAKE = {
-  docs: { lists: [], profiles: [], groups: [], events: [], progress: [] },
+  docs: { lists: [], profiles: [], groups: [], events: [], log: [], progress: [] },
   cbs: {},
   ops: [],
   async init() {},
@@ -132,7 +132,7 @@ window.FAKE = {
     lists: FAKE.docs.lists.length,
     profiles: FAKE.docs.profiles.length
   }));
-  ok(up.events === 14 && up.groups === 1 && up.lists === 1 && up.profiles === 2,
+  ok(up.events === 13 && up.groups === 1 && up.lists === 1 && up.profiles === 2,
      'yerel veri buluta yüklendi (' + JSON.stringify(up) + ')');
   ok((await page.locator('.cloud-dot.online').count()) === 1, 'üstte bağlı işareti çıktı');
 
@@ -145,7 +145,10 @@ window.FAKE = {
   await page.waitForSelector('.sheet', { state: 'detached' });
   await page.waitForTimeout(120);
   const sent = await page.evaluate(() => FAKE.ops.map(o => o.col + ':' + (o.del ? 'sil' : 'yaz')));
-  ok(sent.length === 1 && sent[0] === 'events:yaz', '14 olaydan yalnızca biri yollandı (' + sent.join(', ') + ')');
+  const eventOps = sent.filter((x) => x.indexOf('events:') === 0);
+  ok(eventOps.length === 1 && eventOps[0] === 'events:yaz',
+     '13 olaydan yalnızca biri yollandı (' + sent.join(', ') + ')');
+  ok(sent.filter((x) => x === 'log:yaz').length === 1, 'yanına bir de kayıt defteri satırı gitti');
   ok(await page.evaluate(() => FAKE.docs.events.some(e => e.title === 'Lozan Barış Antlaşması')), 'bulutta güncellendi');
 
   console.log('\n[4] Uzaktan gelen değişiklik');
@@ -177,18 +180,70 @@ window.FAKE = {
   ok(prog[0] && Object.keys(prog[0].data.entries).length >= 1, 'ilerleme kayıtları belgenin içinde');
   await page.click('[data-act="close-study"]');
 
-  console.log('\n[7] İki tarafta da veri varken soruluyor');
+  console.log('\n[7] İki tarafta da veri varken bulut kazanıyor, soru sorulmuyor');
   await page.evaluate(() => {
     K.cloud.disconnect(true);
-    FAKE.docs.events = [{ id: 'uzak1', listId: FAKE.docs.lists[0].id, title: 'Buluttan gelen olay', start: { y: 1500, m: null, d: null }, end: null, approx: false, note: '', tags: [], parentId: null, groupId: null, linkFrom: [], order: 1000 }];
+    FAKE.docs.events = [{
+      id: 'uzak1', listId: FAKE.docs.lists[0].id, title: 'Buluttan gelen olay',
+      start: { y: 1500, m: null, d: null }, end: null, approx: false,
+      note: '', after: '', isSpan: false, parentId: null, groupId: null, order: 1000
+    }];
     K.cloud.connect({ config: { apiKey: 'x', projectId: 'test' }, space: 'ev' });
   });
-  await page.waitForSelector('#m-cloud', { timeout: 5000 });
-  ok(true, 'uzlaştırma sorusu çıktı');
-  await page.click('#m-cloud');
   await page.waitForFunction(() => K.cloud.status() === 'online', null, { timeout: 5000 });
+  ok((await page.locator('.sheet').count()) === 0, 'hiçbir soru sorulmadı');
   ok((await page.locator('.ev-title:has-text("Buluttan gelen olay")').count()) === 1, 'buluttaki veri alındı');
   ok((await page.locator('.ev-title:has-text("Erzurum Kongresi")').count()) === 0, 'yereldekiler yerini bıraktı');
+  const kept = await page.evaluate(() => Object.keys(K.store.get().progress).length);
+  ok(kept > 0, 'ilerleme silinmedi, birleştirildi (' + kept + ' kayıt)');
+
+  console.log('\n[7b] Çevrimdışıyken değişiklik yok, çalışma serbest');
+  await page.context().setOffline(true);
+  await page.waitForTimeout(150);
+  ok((await page.evaluate(() => K.cloud.status())) === 'offline', 'durum çevrimdışı oldu');
+  await page.click('.fab');
+  await page.waitForSelector('.sheet');
+  await page.fill('#f-title', 'Çevrimdışı eklenen');
+  await page.click('#f-save');
+  await page.waitForTimeout(150);
+  ok((await page.locator('.sheet').count()) === 1, 'panel kapanmadı — kayıt engellendi');
+  ok((await page.locator('.ev-title:has-text("Çevrimdışı eklenen")').count()) === 0, 'çevrimdışı kart eklenemedi');
+  const warn = await page.locator('.toast').last().innerText();
+  ok(/İnternet yokken/.test(warn), 'sebebi söylendi: ' + warn);
+  await page.locator('.sheet-x').click();
+
+  const beforeStudy = await page.evaluate(() => Object.keys(K.store.get().progress).length);
+  await page.evaluate(() => {
+    // Sorulacak kadar olay olsun diye buluttan bir liste düşürüyoruz.
+    FAKE.push('events', [1, 2, 3, 4, 5].map((n) => ({
+      id: 'u' + n, listId: FAKE.docs.lists[0].id, title: 'Olay ' + n,
+      start: { y: 1500 + n, m: null, d: null }, end: null, approx: false,
+      note: '', after: '', isSpan: false, parentId: null, groupId: null, order: 1000 + n
+    })));
+  });
+  await page.waitForTimeout(150);
+  await page.click('.due');
+  await page.waitForSelector('.q-text');
+  await page.locator('.opt').first().click();
+  await page.waitForTimeout(150);
+  const afterStudy = await page.evaluate(() => Object.keys(K.store.get().progress).length);
+  ok(afterStudy > beforeStudy, 'çevrimdışıyken günlük tekrar yapılabildi ve ilerleme yazıldı');
+  await page.click('[data-act="close-study"]');
+  await page.context().setOffline(false);
+  await page.waitForTimeout(150);
+  ok((await page.evaluate(() => K.cloud.status())) === 'online', 'bağlantı gelince tekrar çevrimiçi');
+
+  console.log('\n[7c] Kayıt defteri de eşitleniyor');
+  await page.evaluate(() => { FAKE.ops.length = 0; });
+  await page.click('.fab');
+  await page.waitForSelector('.sheet');
+  await page.fill('#f-title', 'Kayıt defteri sınaması');
+  await page.click('#f-save');
+  await page.waitForSelector('.sheet', { state: 'detached' });
+  await page.waitForTimeout(150);
+  const logOps = await page.evaluate(() => FAKE.ops.filter((o) => o.col === 'log'));
+  ok(logOps.length === 1, 'değişiklik kayıt defterine yazıldı ve buluta gitti');
+  ok(/Kayıt defteri sınaması/.test(JSON.stringify(logOps[0])), 'kaydın içinde kartın adı var');
 
   console.log('\n[8] Bağlantı kesilince uygulama çalışmaya devam ediyor');
   await page.evaluate(() => K.cloud.disconnect());

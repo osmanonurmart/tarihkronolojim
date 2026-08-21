@@ -21,22 +21,24 @@ gibi açılır ve internetsiz çalışır.
 
 - **Profiller** — ilk açılışta kim çalışıyor diye sorar, sonra hatırlar. Olaylar
   herkeste ortak, hangi olayı ne kadar bildiğin kişiye özel.
-- **Olaylar** — tam tarih / yalnız yıl / tarihsiz; aralık (`1919-22`), yaklaşık
-  (`~1300`), not ve etiket.
-- **Kapsam** — aralığı olan bir olay, içine düşen olayları solda yuvarlak uçlu
-  parantezle toplar. Katlanabilir, en fazla üç seviye.
+- **Olaylar** — gün / ay / yıl kutuları; boş bırakılanlar yok sayılır. Aralık
+  (`1919-22`), yaklaşık (`~1300`), not.
+- **Sonucunda** — her kartın altında görünen sonuç metni; çalışırken de sorulur.
+- **Kapsam** — olay eklerken açılan kutudan oluşturulur; içine aldıklarını solda
+  yuvarlak uçlu parantezle toplar. Katlanabilir, en fazla üç seviye.
 - **Grup** — tarihi önemsiz, yalnız sırası önemli olaylar için.
-- **Bağ** — "şu olayların ardından şu oldu". Bir veya birkaç kaynaktan çıkar.
 - **Sıralama** — tarihi olanlar kendiliğinden yerine oturur, gerisi elle taşınır.
   Her değişiklik geri alınabilir.
-- **Çalışma** — beş basamaklı tekrar sistemi; araya yerleştirme ve tarih soruları,
-  zayıf olanlar önde.
+- **Çalışma** — beş basamaklı tekrar sistemi; araya yerleştirme, tarih ve sonuç
+  soruları, zayıf olanlar önde.
 - **Kör mod** — tarihleri gizler, dokununca tek tek açılır.
 - **Yedek** — dosya olarak indir/geri yükle, ya da okunabilir metni kopyala.
 - **Bulut** — Firebase ile telefon ve bilgisayar eşitlenir; ayar gömülü geldiği
   için uygulamayı açan cihaz kendiliğinden bağlanır. Yalnızca değişen kayıtlar
-  yollanır, çevrimdışıyken uygulama aynen çalışır. Kendi projeni kurmak için:
-  [`docs/firebase.md`](docs/firebase.md).
+  yollanır. Bulutta içerik varsa o kazanır, soru sorulmaz. İnternet yokken kart
+  eklenip değiştirilemez ama günlük tekrar yapılabilir; ilerleme sonra yüklenir.
+  Kendi projeni kurmak için: [`docs/firebase.md`](docs/firebase.md).
+- **Kayıt defteri** — son değişiklikler (kim, ne zaman, ne yaptı) Ayarlar'da.
 
 ## Sırada ne var
 

@@ -50,7 +50,8 @@ K.study = (function () {
         q.render(o) + '</button>';
     }).join('');
 
-    const kindLabel = q.kind === K.srs.KINDS.ORDER ? 'Araya yerleştirme' : 'Tarih';
+    const kindLabel = q.kind === K.srs.KINDS.ORDER ? 'Araya yerleştirme'
+      : q.kind === K.srs.KINDS.AFTER ? 'Sonucunda' : 'Tarih';
     let verdict = '';
     if (answered) {
       const ok = session.answered === q.correctIndex;

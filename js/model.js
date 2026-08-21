@@ -3,6 +3,7 @@ window.K = window.K || {};
 /* Olay modeli, tarih biçimleri ve ağaç kurma. */
 K.model = (function () {
   const MONTHS = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  const MONTHS_LONG = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
   const MAX_DEPTH = 3;
 
   /* ---- Tarih ---- */
@@ -30,11 +31,9 @@ K.model = (function () {
       const sameCentury = sa.length === sb.length && sa.slice(0, -2) === sb.slice(0, -2);
       return sa + '-' + (sameCentury ? sb.slice(-2) : sb);
     }
-    // Aynı ay: 23-31 Mar 1921
     if (a.y === b.y && a.m === b.m && a.d && b.d) {
       return a.d + '-' + b.d + ' ' + MONTHS[a.m - 1] + ' ' + a.y;
     }
-    // Aynı yıl, farklı ay: 23 Mar - 5 Nis 1921
     if (a.y === b.y && a.m && b.m) {
       const head = a.d ? a.d + ' ' + MONTHS[a.m - 1] : MONTHS[a.m - 1];
       return head + ' - ' + fmtOne(b);
@@ -47,6 +46,7 @@ K.model = (function () {
     return (ev.approx ? '~' : '') + fmtRange(ev.start, ev.end);
   }
 
+  // Boş bırakılan kutular yok sayılır: hiçbiri dolu değilse olay tarihsizdir.
   function parseDate(y, m, d) {
     y = parseInt(y, 10);
     if (!y || y < 1 || y > 9999) return null;
@@ -62,15 +62,9 @@ K.model = (function () {
   const listEvents = (db) => db.events.filter((e) => e.listId === db.ui.listId);
   const listGroups = (db) => db.groups.filter((g) => g.listId === db.ui.listId);
 
-  function isSpan(db, ev) {
-    if (!ev.end) return false;
-    return db.events.some((e) => e.parentId === ev.id) ||
-           db.groups.some((g) => g.parentId === ev.id);
-  }
+  // Kapsam artık kendiliğinden oluşmuyor: yalnızca işaretlenmiş olaylar kapsamdır.
+  function isSpan(ev) { return !!(ev && ev.isSpan); }
 
-  function canBeSpan(ev) { return !!ev.end; }
-
-  // Bir kapsamın derinliği: kök 1, içindeki kapsam 2 …
   function depthOf(db, ev) {
     let d = 1, cur = ev, guard = 0;
     while (cur && cur.parentId && guard++ < 10) {
@@ -80,7 +74,6 @@ K.model = (function () {
     return d;
   }
 
-  // Bir kabın (kök, kapsam ya da grup) doğrudan çocukları, sıraya dizili.
   function childrenOf(db, parentId) {
     const evs = listEvents(db).filter((e) => e.parentId === parentId && !e.groupId);
     const grs = listGroups(db).filter((g) => g.parentId === parentId);
@@ -94,24 +87,6 @@ K.model = (function () {
       .sort((a, b) => a.order - b.order);
   }
 
-  // Sonuç kutusu: kaynağı olan ve tarihi olmayan olaylar kendi akışlarında
-  // değil, kaynaklarının altında görünür.
-  function isAttached(ev) {
-    return ev.linkFrom && ev.linkFrom.length > 0 && !ev.start;
-  }
-
-  // Birden çok kaynağı olan bir sonuç, listede yalnızca en sondaki
-  // kaynağının altında görünür — yoksa her kaynağın altında tekrarlanırdı.
-  function anchorOf(db, ev) {
-    const srcs = (ev.linkFrom || []).map((id) => byId(db, id)).filter(Boolean);
-    if (!srcs.length) return null;
-    return srcs.reduce((a, b) => (b.order > a.order ? b : a)).id;
-  }
-
-  function attachedTo(db, sourceId) {
-    return listEvents(db).filter((e) => isAttached(e) && anchorOf(db, e) === sourceId);
-  }
-
   /* ---- Sıra numaraları ---- */
   function orderBetween(before, after) {
     if (before == null && after == null) return 1000;
@@ -120,36 +95,38 @@ K.model = (function () {
     return (before + after) / 2;
   }
 
-  // Tarihi olan bir olayı kardeşleri arasında doğru yere yerleştirir.
   function orderForDate(db, ev) {
-    const sibs = childrenOf(db, ev.parentId)
-      .filter((n) => n.t === 'ev' && n.ev.id !== ev.id && n.ev.start && !isAttached(n.ev));
+    const siblings = childrenOf(db, ev.parentId);
     if (!ev.start) {
-      const last = childrenOf(db, ev.parentId).filter((n) => n.ev ? n.ev.id !== ev.id : true);
-      return last.length ? last[last.length - 1].order + 1 : 1000;
+      const rest = siblings.filter((n) => !n.ev || n.ev.id !== ev.id);
+      return rest.length ? rest[rest.length - 1].order + 1 : 1000;
     }
+    const dated = siblings.filter((n) => n.t === 'ev' && n.ev.id !== ev.id && n.ev.start);
     const k = key(ev.start);
     let before = null, after = null;
-    for (const n of sibs) {
+    for (const n of dated) {
       if (key(n.ev.start) <= k) before = n.order;
       else { after = n.order; break; }
     }
     return orderBetween(before, after);
   }
 
-  // Tarihi olan bir olayın içine düştüğü en derin kapsamı bulur.
-  function suggestParent(db, start, ignoreId) {
-    if (!start) return null;
-    const k = key(start);
-    let best = null, bestDepth = 0;
-    for (const e of listEvents(db)) {
-      if (e.id === ignoreId || !e.end || !e.start) continue;
-      if (k < key(e.start) || k > key(e.end)) continue;
-      const d = depthOf(db, e);
-      if (d >= MAX_DEPTH) continue;      // 3 seviyeden derine inmeyiz
-      if (d > bestDepth) { best = e; bestDepth = d; }
+  // Kapsam kutusunda gösterilecek olanlar: kendisi ve altındakiler hariç.
+  function spanOptions(db, ev) {
+    return listEvents(db).filter((s) => {
+      if (!isSpan(s)) return false;
+      if (ev && (s.id === ev.id || isDescendant(db, s.id, ev.id))) return false;
+      return depthOf(db, s) < MAX_DEPTH;
+    });
+  }
+
+  function isDescendant(db, candidateId, ancestorId) {
+    let cur = byId(db, candidateId), guard = 0;
+    while (cur && guard++ < 20) {
+      if (cur.id === ancestorId) return true;
+      cur = cur.parentId ? byId(db, cur.parentId) : null;
     }
-    return best ? best.id : null;
+    return false;
   }
 
   // Bütün ağacı, göründüğü sırayla düz bir olay dizisine çevirir.
@@ -160,20 +137,26 @@ K.model = (function () {
         eventsOfGroup(db, node.gr.id).forEach((e) => out.push(e));
         continue;
       }
-      const ev = node.ev;
-      if (isAttached(ev)) continue;      // kaynağının altında görünür
-      out.push(ev);
-      attachedTo(db, ev.id).forEach((a) => out.push(a));
-      if (isSpan(db, ev)) flatten(db, ev.id).forEach((e) => out.push(e));
+      out.push(node.ev);
+      if (isSpan(node.ev)) flatten(db, node.ev.id).forEach((e) => out.push(e));
     }
     return out;
   }
 
   function byId(db, id) { return db.events.find((e) => e.id === id) || null; }
 
+  function blank(listId) {
+    return {
+      id: K.util.uid(), listId: listId, title: '',
+      start: null, end: null, approx: false,
+      note: '', after: '',
+      isSpan: false, parentId: null, groupId: null, order: 1000
+    };
+  }
+
   return {
-    MONTHS, MAX_DEPTH, key, fmtOne, fmtRange, fmtEvent, parseDate,
-    listEvents, listGroups, isSpan, canBeSpan, depthOf, childrenOf, eventsOfGroup,
-    isAttached, attachedTo, anchorOf, orderBetween, orderForDate, suggestParent, flatten, byId
+    MONTHS, MONTHS_LONG, MAX_DEPTH, key, fmtOne, fmtRange, fmtEvent, parseDate,
+    listEvents, listGroups, isSpan, depthOf, childrenOf, eventsOfGroup,
+    orderBetween, orderForDate, spanOptions, isDescendant, flatten, byId, blank
   };
 })();

@@ -16,7 +16,8 @@ window.K = window.K || {};
    çalışmadığı için orada çakışma doğal olarak oluşmaz. */
 K.cloud = (function () {
   const CFG_KEY = 'kronolojim.cloud.v1';
-  const COLLECTIONS = ['lists', 'profiles', 'groups', 'events'];
+  const COLLECTIONS = ['lists', 'profiles', 'groups', 'events', 'log'];
+  const ALL = COLLECTIONS.concat(['progress']);
   const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
 
   let cfg = null;
@@ -132,29 +133,45 @@ K.cloud = (function () {
   }
 
   function fullUpload(db) {
-    return diff(
-      { lists: [], profiles: [], groups: [], events: [], progress: {} },
-      db
-    );
+    const empty = { progress: {} };
+    COLLECTIONS.forEach((c) => { empty[c] = []; });
+    return diff(empty, db);
   }
 
   /* ---- Uzaktan gelen ---- */
+  /* İlerleme birleştirilir, üzerine yazılmaz: internetsiz yapılan bir çalışma
+     seansı bağlanır bağlanmaz silinmesin diye. Bir profili tek kişi çalıştığı
+     için "hangisinde daha çok cevap varsa o" kuralı yeterli. */
+  function mergeProgress(db, docs) {
+    const incoming = {};
+    docs.forEach((d) => {
+      Object.keys(d.entries || {}).forEach((k) => { incoming[d.id + '|' + k] = d.entries[k]; });
+    });
+    const local = db.progress || {};
+    const merged = {};
+    const seen = {};
+    Object.keys(incoming).concat(Object.keys(local)).forEach((k) => {
+      if (seen[k]) return;
+      seen[k] = true;
+      const a = incoming[k], b = local[k];
+      if (!a) { merged[k] = b; return; }
+      if (!b) { merged[k] = a; return; }
+      const na = (a.right || 0) + (a.wrong || 0);
+      const nb = (b.right || 0) + (b.wrong || 0);
+      merged[k] = na >= nb ? a : b;
+    });
+    db.progress = merged;
+  }
+
   function applySnapshot(col, docs) {
     if (!ready) { pending[col] = docs; return; }
     applying = true;
     K.store.applyRemote((db) => {
-      if (col === 'progress') {
-        const flat = {};
-        docs.forEach((d) => {
-          Object.keys(d.entries || {}).forEach((k) => { flat[d.id + '|' + k] = d.entries[k]; });
-        });
-        db.progress = flat;
-      } else {
-        db[col] = docs;
-        if (col === 'profiles' && !docs.some((p) => p.id === db.ui.profileId)) db.ui.profileId = null;
-        if (col === 'lists' && !docs.some((l) => l.id === db.ui.listId)) {
-          db.ui.listId = docs.length ? docs[0].id : null;
-        }
+      if (col === 'progress') { mergeProgress(db, docs); return; }
+      db[col] = docs;
+      if (col === 'profiles' && !docs.some((p) => p.id === db.ui.profileId)) db.ui.profileId = null;
+      if (col === 'lists' && !docs.some((l) => l.id === db.ui.listId)) {
+        db.ui.listId = docs.length ? docs[0].id : null;
       }
     });
     applying = false;
@@ -162,47 +179,39 @@ K.cloud = (function () {
 
   function cloudHasContent(snap) {
     return (snap.events && snap.events.length > 0) ||
-           (snap.groups && snap.groups.length > 0) ||
-           (snap.lists && snap.lists.length > 0);
+           (snap.groups && snap.groups.length > 0);
   }
 
-  function localHasContent(db) {
-    return db.events.length > 0 || db.groups.length > 0;
-  }
-
-  function adoptCloud(snap) {
-    ready = true;
-    ['lists', 'profiles', 'groups', 'events', 'progress'].forEach((col) => {
-      applySnapshot(col, snap[col] || []);
-    });
-  }
-
-  function uploadLocal() {
-    ready = true;
-    const ops = fullUpload(K.store.get());
+  function pushProgress() {
+    const grouped = byProfile(K.store.get().progress);
+    const ops = Object.keys(grouped).map((pid) => ({
+      col: 'progress', id: pid, data: { entries: grouped[pid] }
+    }));
     if (ops.length) backend.commit(cfg.space, ops);
   }
 
+  /* Bulut her zaman haklı: bulutta içerik varsa o alınır, yoksa bu cihazdaki
+     yüklenir. İlerleme bu kuralın dışında — birleştirilir. */
   function reconcile() {
     const snap = pending;
-    const db = K.store.get();
-    const cloudFull = cloudHasContent(snap);
-    const localFull = localHasContent(db);
+    ready = true;
 
-    if (!cloudFull) { uploadLocal(); return finish(); }
-    if (!localFull) { adoptCloud(snap); return finish(); }
-
-    K.panels.cloudMerge(function (choice) {
-      if (choice === 'cloud') adoptCloud(snap);
-      else uploadLocal();
-      finish();
-    });
+    if (cloudHasContent(snap)) {
+      ALL.forEach((col) => applySnapshot(col, snap[col] || []));
+      K.store.normalizeAndPush();     // bulut kopyası eski şekildeyse düzeltilir
+      pushProgress();
+    } else {
+      applySnapshot('progress', snap.progress || []);
+      const ops = fullUpload(K.store.get());
+      if (ops.length) backend.commit(cfg.space, ops);
+    }
+    finish();
   }
 
   function finish() {
     pending = null;
     setState('online');
-    K.app.render();
+    if (K.app && K.app.render) K.app.render();
   }
 
   function setState(s, err) {
@@ -285,14 +294,13 @@ K.cloud = (function () {
       return;
     }
 
-    const cols = ['lists', 'profiles', 'groups', 'events', 'progress'];
     let firstSeen = 0;
 
-    cols.forEach((col) => {
+    ALL.forEach((col) => {
       const un = backend.watch(cfg.space, col,
         (docs) => {
           applySnapshot(col, docs);
-          if (!ready && ++firstSeen === cols.length) reconcile();
+          if (!ready && ++firstSeen === ALL.length) reconcile();
         },
         (err) => setState('error', 'Okuma hatası: ' + (err && err.message ? err.message : err))
       );
@@ -325,6 +333,13 @@ K.cloud = (function () {
   /* Uygulamanın kendi ayarı gömülü geldiği için açılışta kendiliğinden
      bağlanır. Kullanıcı bağlantıyı kestiyse o tercih saklanır ve bir daha
      kendiliğinden bağlanmaz. */
+  function currentStatus() {
+    if (state === 'online' && navigator.onLine === false) return 'offline';
+    return state;
+  }
+
+  function isEnabled() { return !!(cfg && !cfg.off); }
+
   function boot() {
     loadCfg();
     if (window.KRONOLOJIM_NO_CLOUD) { setState('off'); return; }   // testler için
@@ -345,7 +360,8 @@ K.cloud = (function () {
 
   return {
     boot, connect, disconnect, reconnect, hasBuiltIn, onLocalChange,
-    status: () => state,
+    status: currentStatus,
+    isEnabled: isEnabled,
     error: () => lastError,
     config: () => cfg,
     parseConfig: parseConfig,

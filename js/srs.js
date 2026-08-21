@@ -4,7 +4,7 @@ window.K = window.K || {};
 K.srs = (function () {
   const INTERVALS = { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 };   // seviye -> kaç gün sonra
   const SESSION_MAX = 20;
-  const KINDS = { DATE: 'date', ORDER: 'order' };
+  const KINDS = { DATE: 'date', ORDER: 'order', AFTER: 'after' };
 
   const pkey = (profileId, eventId, kind) => profileId + '|' + eventId + '|' + kind;
 
@@ -14,12 +14,12 @@ K.srs = (function () {
   }
 
   function levelOf(db, eventId) {
-    // Kartın rengi iki puanın düşüğünü gösterir: zayıf olan taraf öne çıksın.
-    const a = rec(db, eventId, KINDS.ORDER).level;
+    // Kartın rengi puanların en düşüğünü gösterir: zayıf taraf öne çıksın.
     const ev = K.model.byId(db, eventId);
-    if (!ev || !ev.start) return a;
-    const b = rec(db, eventId, KINDS.DATE).level;
-    return Math.min(a, b);
+    let level = rec(db, eventId, KINDS.ORDER).level;
+    if (ev && ev.start) level = Math.min(level, rec(db, eventId, KINDS.DATE).level);
+    if (ev && ev.after) level = Math.min(level, rec(db, eventId, KINDS.AFTER).level);
+    return level;
   }
 
   function record(db, eventId, kind, correct) {
@@ -37,6 +37,7 @@ K.srs = (function () {
     const flat = K.model.flatten(db, null);
     const today = K.util.todayISO();
     const items = [];
+    const withAfter = flat.filter((e) => e.after).length;
 
     flat.forEach((ev, i) => {
       // Sıra sorusu için etrafında yeterli olay olmalı.
@@ -47,6 +48,12 @@ K.srs = (function () {
       if (ev.start) {
         const r = rec(db, ev.id, KINDS.DATE);
         if (!r.due || r.due <= today) items.push({ ev: ev, kind: KINDS.DATE, level: r.level, due: r.due, idx: i });
+      }
+      // Sonuç sorusu için başka kartlarda da sonuç metni olmalı — yanlış
+      // şıklar oradan geliyor.
+      if (ev.after && withAfter >= 4) {
+        const r = rec(db, ev.id, KINDS.AFTER);
+        if (!r.due || r.due <= today) items.push({ ev: ev, kind: KINDS.AFTER, level: r.level, due: r.due, idx: i });
       }
     });
 
@@ -155,6 +162,33 @@ K.srs = (function () {
     };
   }
 
+  function buildAfterQuestion(db, ev, flat) {
+    if (!ev.after) return null;
+    const correct = ev.after;
+
+    const pool = flat.filter((e) => e.id !== ev.id && e.after).map((e) => e.after);
+    const seen = { };
+    seen[correct] = true;
+    const wrong = [];
+    for (const cand of K.util.shuffle(pool)) {
+      if (wrong.length >= 3) break;
+      if (seen[cand]) continue;
+      seen[cand] = true;
+      wrong.push(cand);
+    }
+    if (wrong.length < 3) return null;
+
+    const options = K.util.shuffle([correct].concat(wrong));
+    return {
+      kind: KINDS.AFTER,
+      ev: ev,
+      text: '<span class="subject">' + K.util.esc(ev.title) + '</span> sonucunda ne oldu?',
+      options: options,
+      correctIndex: options.indexOf(correct),
+      render: (o) => K.util.esc(o)
+    };
+  }
+
   /* Bir seans: en fazla 20 soru, zayıflar önde. */
   function buildSession(db) {
     const flat = K.model.flatten(db, null);
@@ -166,8 +200,8 @@ K.srs = (function () {
       if (qs.length >= SESSION_MAX) break;
       const sig = it.ev.id + '|' + it.kind;
       if (used.has(sig)) continue;
-      const q = it.kind === KINDS.ORDER
-        ? buildOrderQuestion(db, it.ev, flat)
+      const q = it.kind === KINDS.ORDER ? buildOrderQuestion(db, it.ev, flat)
+        : it.kind === KINDS.AFTER ? buildAfterQuestion(db, it.ev, flat)
         : buildDateQuestion(db, it.ev, flat);
       if (!q) continue;
       used.add(sig);
