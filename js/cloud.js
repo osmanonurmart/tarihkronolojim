@@ -63,10 +63,19 @@ K.cloud = (function () {
     }
     if (end < 0) throw new Error('Ayar bloğu kapanmamış.');
 
-    const body = src.slice(start, end + 1)
+    let body = src.slice(start, end + 1)
       .replace(/([{,]\s*)([A-Za-z0-9_$]+)\s*:/g, '$1"$2":')
       .replace(/'/g, '"')
       .replace(/,\s*([}\]])/g, '$1');
+
+    // Konsol uzun anahtarı kendi kutusunda satırlara bölerek gösteriyor;
+    // aradaki satır sonlarını temizliyoruz.
+    body = body.replace(/"([^"]*)"/g, (m, v) =>
+      /\n/.test(v) ? '"' + v.replace(/\s+/g, '') + '"' : m);
+
+    if (/[\u2022\u00B7\u25CF\u2219*]{3,}/.test(body)) {
+      throw new Error('API anahtarı gizli görünüyor. Firebase konsolunda anahtarın yanındaki kopyala düğmesine basıp gerçek değeri al.');
+    }
 
     let obj;
     try { obj = JSON.parse(body); }

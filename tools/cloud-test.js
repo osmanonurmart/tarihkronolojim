@@ -70,7 +70,13 @@ window.FAKE = {
         'const app = initializeApp(firebaseConfig);',
         'const analytics = getAnalytics(app);'
       ].join('\n')),
-      bad: (() => { try { K.cloud.parseConfig('merhaba'); return 'hata yok'; } catch (e) { return 'reddedildi'; } })()
+      bad: (() => { try { K.cloud.parseConfig('merhaba'); return 'hata yok'; } catch (e) { return 'reddedildi'; } })(),
+      masked: (() => {
+        try { K.cloud.parseConfig('const c = { apiKey: "AIzaSyBL\u2022\u2022\u2022\u2022\u2022\u2022", projectId: "x" };'); return 'hata yok'; }
+        catch (e) { return e.message; }
+      })(),
+      // Konsolun kutusu anahtarı satırlara bölerek gösteriyor
+      wrapped: K.cloud.parseConfig('const c = {\n  apiKey: "\nAIzaSyReal123\n",\n  projectId: "demo-a8405"\n};')
     };
   });
   ok(pure.ops.length === 3, 'fark üç işlem üretti (değişen olay, yeni olay, ilerleme) — ' + pure.ops.length);
@@ -85,6 +91,8 @@ window.FAKE = {
   ok(pure.whole.projectId === 'demo-a8405' && pure.whole.appId.indexOf('1:104') === 0 && !pure.whole.initializeApp,
      'konsoldan olduğu gibi yapıştırılan tam parça okunuyor (import satırları dahil)');
   ok(pure.bad === 'reddedildi', 'alakasız metin düzgün reddediliyor');
+  ok(/gizli/.test(pure.masked), 'gizlenmiş anahtar yakalanıp anlatılıyor: ' + pure.masked.slice(0, 40) + '…');
+  ok(pure.wrapped.apiKey === 'AIzaSyReal123', 'satırlara bölünmüş anahtar toparlanıyor');
 
   console.log('\n[2] Boş buluta ilk yükleme');
   await page.click('button:has-text("Onur")');
