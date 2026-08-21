@@ -1,9 +1,9 @@
 /* Çevrimdışı yedek. Önce ağdan alır, ancak internet yoksa kayıtlı kopyaya
    düşer — böylece yeni sürüm bir sonraki açılışı beklemeden gelir. */
-const CACHE = 'kronolojim-v4';
+const CACHE = 'kronolojim-v5';
 const ASSETS = [
   './', './index.html', './css/app.css', './icon.svg', './manifest.webmanifest',
-  './js/util.js', './js/model.js', './js/store.js', './js/firebase-config.js',
+  './js/util.js', './js/model.js', './js/textimport.js', './js/store.js', './js/firebase-config.js',
   './js/cloud.js', './js/srs.js', './js/app.js',
   './js/views/timeline.js', './js/views/editor.js', './js/views/study.js', './js/views/panels.js'
 ];

@@ -21,7 +21,7 @@ K.store = (function () {
       groups: [],
       log: [],                            // son değişiklikler: kim, ne zaman, ne
       progress: {},                       // "profil|olay|tip" -> {level, due, right, wrong}
-      ui: { profileId: null, listId: lid, theme: 'dark', blind: false, editing: false, collapsed: [] }
+      ui: { profileId: null, listId: lid, blind: false, editing: false, collapsed: [] }
     };
   }
 

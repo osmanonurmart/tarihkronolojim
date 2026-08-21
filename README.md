@@ -31,8 +31,11 @@ gibi açılır ve internetsiz çalışır.
   Her değişiklik geri alınabilir.
 - **Çalışma** — beş basamaklı tekrar sistemi; araya yerleştirme, tarih ve sonuç
   soruları, zayıf olanlar önde.
-- **Kör mod** — tarihleri gizler, dokununca tek tek açılır.
-- **Yedek** — dosya olarak indir/geri yükle, ya da okunabilir metni kopyala.
+- **Kör mod** — üstteki düğme tarihleri gizler, dokununca tek tek açılır.
+- **Tek görünüm** — uygulama her zaman karanlık, seçenek sunmuyor.
+- **Yedek** — dosya olarak indir/geri yükle, okunabilir metni kopyala, ya da
+  metin yapıştırıp içe aktar. Kopyalanan metin aynen geri yüklenebilir, yani
+  yapay zekaya kontrol ettirip düzeltilmiş halini geri koyabilirsin.
 - **Bulut** — Firebase ile telefon ve bilgisayar eşitlenir; ayar gömülü geldiği
   için uygulamayı açan cihaz kendiliğinden bağlanır. Yalnızca değişen kayıtlar
   yollanır. Bulutta içerik varsa o kazanır, soru sorulmaz. İnternet yokken kart
@@ -61,6 +64,7 @@ index.html          kabuk
 css/app.css         tüm görsel dil, karanlık ve açık tema
 js/util.js          küçük yardımcılar
 js/model.js         olay modeli, tarih biçimleri, ağaç kurma
+js/textimport.js    metinden olay okuma
 js/store.js         durum, kayıt, geri alma
 js/firebase-config.js  gömülü Firebase ayarı
 js/cloud.js         Firebase senkronu

@@ -129,6 +129,7 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   console.log('\n[9] Kayıt defteri');
   await page.click('[data-act="settings"]');
   await page.waitForSelector('.sheet');
+  await page.click('.fold > summary');
   const logRows = await page.locator('.log-row').count();
   ok(logRows > 3, 'kayıt defterinde ' + logRows + ' satır var');
   const first = await page.locator('.log-row').first().innerText();
@@ -164,17 +165,90 @@ function ok(cond, msg) { console.log((cond ? '  ✓ ' : '  ✗ ') + msg); if (!c
   await page.locator('.collapsed-span').click();
   ok((await page.locator('.bracket').count()) === 1, 'tekrar açıldı');
 
-  console.log('\n[12] Kalıcılık ve temalar');
+  console.log('\n[12] Ayarlar sadeleşti');
+  await page.click('[data-act="settings"]');
+  await page.waitForSelector('.sheet');
+  ok((await page.locator('#s-theme').count()) === 0, 'görünüm seçeneği kalktı');
+  ok((await page.locator('#s-blind').count()) === 0, 'kör mod ayarı kalktı (üstte zaten var)');
+  ok((await page.locator('#c-retry').count()) === 0 && (await page.locator('#c-off').count()) === 0,
+     'bulut düğmeleri kalktı, sadece durum kaldı');
+  ok((await page.locator('.cloud-dot').count()) >= 1, 'bulut durumu görünüyor');
+  ok((await page.locator('.fold > summary').count()) === 1, 'son değişiklikler katlanır düğme oldu');
+  ok(!(await page.locator('.log').isVisible()), 'kayıtlar başlangıçta kapalı');
+  await page.click('.fold > summary');
+  ok(await page.locator('.log').isVisible(), 'dokununca açıldı');
+  ok((await page.locator('#s-paste').count()) === 1, 'İçe aktar düğmesi geldi');
+  ok((await page.locator('#s-import').count()) === 1, 'dosyadan geri yükle duruyor');
+  const dark = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+  ok(dark === 'dark', 'uygulama her zaman karanlık');
+
+  console.log('\n[13] Metin çözümleme');
+  const parsed = await page.evaluate(() => {
+    const p = K.textimport.parse([
+      '# İnkılap Tarihi',
+      '',
+      '1071 - Malazgirt Savaşı | Anadolu\'nun kapıları açıldı',
+      '19.05.1919 - Samsun\'a Çıkış',
+      '23 Temmuz 1919 — Erzurum Kongresi',
+      '1919-22 — Kurtuluş Savaşı  (kapsam — altındakiler bu aralığın içinde)',
+      '  - 23-31 Mar 1921 — II. İnönü Savaşı',
+      '    ↳ sonucunda: İsmet Bey Dışişleri Bakanı oldu',
+      '  - [Cepheler] (grup, sadece sıra)',
+      '    1. Doğu Cephesi',
+      '    2. Güney Cephesi',
+      '~1300 - Osmanlı Beyliği kuruldu',
+      'II. Meşrutiyet 1908',
+      'Sadece bir başlık'
+    ].join('\n'));
+    const byTitle = {};
+    p.events.forEach((e) => { byTitle[e.title] = e; });
+    return { p: p, t: byTitle };
+  });
+  const T = parsed.t;
+  ok(parsed.p.events.length === 10, '10 olay okundu (' + parsed.p.events.length + ')');
+  ok(parsed.p.groups.length === 1, 'bir grup okundu');
+  ok(T['Malazgirt Savaşı'].start.y === 1071 && T['Malazgirt Savaşı'].note.indexOf('kapıları') >= 0,
+     'yıl ve not ayrıldı');
+  ok(T["Samsun'a Çıkış"].start.d === 19 && T["Samsun'a Çıkış"].start.m === 5, 'noktalı tarih okundu');
+  ok(T['Erzurum Kongresi'].start.m === 7, 'uzun ay adı okundu');
+  ok(T['Kurtuluş Savaşı'].isSpan && T['Kurtuluş Savaşı'].end.y === 1922, 'kısaltılmış aralık 1919-22 çözüldü');
+  ok(T['II. İnönü Savaşı'].parentId === T['Kurtuluş Savaşı'].id, 'girintili satır kapsamın içine girdi');
+  ok(T['II. İnönü Savaşı'].after.indexOf('İsmet Bey') === 0, 'sonuç satırı üstteki olaya bağlandı');
+  ok(T['Doğu Cephesi'].groupId === parsed.p.groups[0].id, 'numaralı satırlar gruba girdi');
+  ok(T['Osmanlı Beyliği kuruldu'].approx === true, 'yaklaşık işareti okundu');
+  ok(T['II. Meşrutiyet'] && T['II. Meşrutiyet'].start.y === 1908, 'sondaki tarih de okundu');
+  ok(T['Sadece bir başlık'].start === null, 'tarihsiz satır tarihsiz kaldı');
+
+  console.log('\n[14] Panelden içe aktarma ve gidiş-dönüş');
+  const outline = await page.evaluate(() => K.panels.outline(K.store.get()));
+  const originalCount = await page.evaluate(() => K.model.listEvents(K.store.get()).length);
+  await page.click('#s-paste');
+  await page.waitForSelector('#i-text');
+  await page.fill('#i-text', '1453 - İstanbul\'un Fethi\n1683 - II. Viyana Kuşatması');
+  await page.waitForTimeout(80);
+  const info = await page.locator('#i-count').innerText();
+  ok(/2 olay \(2 tanesi tarihli\)/.test(info), 'aktarmadan önce ne geleceğini söylüyor: ' + info);
+  await page.click('#i-go');
+  await page.waitForSelector('#i-text', { state: 'detached' });
+  ok((await page.locator('.ev-title:has-text("İstanbul\'un Fethi")').count()) === 1, 'yeni olay listeye eklendi');
+  ok((await page.locator('.ev-title:has-text("Malazgirt Savaşı")').count()) === 1, 'eskiler duruyor — üstüne yazmadı');
+
+  // Kopyalanan metnin kendisi geri yüklenebiliyor mu?
+  await page.evaluate((text) => {
+    const before = K.model.listEvents(K.store.get()).length;
+    const p = K.textimport.parse(text);
+    window.__round = { before: before, after: p.events.length, groups: p.groups.length };
+  }, outline);
+  const round = await page.evaluate(() => window.__round);
+  ok(round.after === originalCount, 'kopyalanan metin aynı sayıda olayı geri veriyor (' +
+     round.after + '/' + originalCount + ')');
+  ok(round.groups === 1, 'grup da geri geliyor');
+
+  console.log('\n[15] Kalıcılık');
   await page.reload({ waitUntil: 'networkidle' });
   ok((await page.locator('.topbar .who-name').innerText()) === 'Onur', 'profil hatırlandı');
   ok((await page.locator('.ev').count()) > 5, 'olaylar kaydedildi');
-  await page.click('[data-act="settings"]');
-  await page.click('[data-theme="light"]');
-  const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  ok(bg === 'rgb(243, 244, 248)', 'açık tema uygulandı');
-  await noOverflow('açık tema');
-  await page.click('[data-theme="dark"]');
-  await page.locator('.sheet-x').click();
+  await noOverflow('yeniden açılış');
 
   await page.screenshot({ path: process.argv[2] + '/ekran-liste.png' });
   await page.click('[data-act="edit"]');

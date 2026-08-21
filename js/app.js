@@ -3,16 +3,9 @@ window.K = window.K || {};
 K.app = (function () {
   const root = () => document.getElementById('app');
 
+  // Uygulama tek görünümde: karanlık. Seçenek sunmuyoruz.
   function applyTheme() {
-    const t = K.store.get().ui.theme;
-    if (t === 'system') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', t);
-    const meta = document.querySelector('meta[name=theme-color]');
-    if (meta) {
-      const dark = t === 'dark' ||
-        (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      meta.setAttribute('content', dark ? '#101219' : '#F3F4F8');
-    }
+    document.documentElement.setAttribute('data-theme', 'dark');
   }
 
   function render() {
@@ -188,7 +181,6 @@ K.app = (function () {
     document.addEventListener('click', onClick);
     document.addEventListener('keydown', onKey);
     K.timeline.bind(root());
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
     window.addEventListener('online', render);
     window.addEventListener('offline', render);
     render();

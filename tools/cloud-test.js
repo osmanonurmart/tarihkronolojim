@@ -51,7 +51,9 @@ window.FAKE = {
   await page.click('[data-act="settings"]');
   await page.waitForSelector('.sheet');
   ok((await page.locator('#c-cfg').count()) === 0, 'ayar yapıştırma kutusu artık yok');
-  ok((await page.locator('#c-off').count()) === 1, 'bağlantıyı kesme düğmesi duruyor');
+  ok((await page.locator('#c-retry').count()) === 0 && (await page.locator('#c-off').count()) === 0,
+     'bulut düğmeleri kalktı — ayarlarda sadece durum var');
+  ok((await page.locator('.cloud-dot').count()) >= 1, 'bağlantı durumu görünüyor');
   await page.keyboard.press('Escape');
 
   // Kalan sınamalar ağa çıkmasın diye kendiliğinden bağlanmayı kapatıyoruz.
